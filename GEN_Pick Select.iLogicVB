@@ -1,0 +1,11 @@
+' Face Selection Example
+Dim oFace As Face = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFaceFilter, "Select Face")
+MessageBox.Show(oFace.Name)
+
+' Assembly Occurrence Example
+Dim oOcc As ComponentOccurrence = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFaceFilter, "Select Face")
+MessageBox.Show(oFace.Name)
+
+' Assembly Leaf Occurrence Example
+Dim oFace As ComponentOccurrence = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFaceFilter, "Select Face")
+MessageBox.Show(oFace.Name)
