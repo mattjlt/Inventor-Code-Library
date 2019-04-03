@@ -1,0 +1,19 @@
+' Check document type
+If ThisApplication.ActiveDocument.DocumentType <> kDrawingDocument Then
+  Messagebox.Show("A drawing document needs to be open", "Incorrect Document Type")
+  Exit Sub
+End If
+
+Dim oDoc As DrawingDocument = ThisApplication.ActiveDocument
+Dim oSheet As Sheet
+Dim oView As DrawingView
+
+'Iterate through all sheets in the document
+For Each oSheet In oDoc.Sheets
+  ' Do sheet functions here
+  ' Iterate through all views in the sheet
+  For Each oView in oSheet.DrawingViews
+      ' Do view functions here
+      ' e.g. oView.Name
+  Next
+Next
