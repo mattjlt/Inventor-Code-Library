@@ -1,0 +1,30 @@
+' Check document type
+' HERE
+ThisApplication.StatusBarText = "Test"
+Dim oDoc As AssemblyDocument = ThisApplication.ActiveDocument
+
+' Get source occurrence
+Dim oSrcOcc As ComponentOccurrence = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kAssemblyOccurrenceFilter, "Select source occurrence")
+
+' Check that an object was selected
+If oSrcOcc Is Nothing Then 
+	MessageBox.Show("Nothing was selected","Selection Cancelled")
+	Exit Sub
+End If
+
+' Add this to selection loop
+If My.Computer.Keyboard.CtrlKeyDown Or My.Computer.Keyboard.ShiftKeyDown Then
+        MsgBox("SHIFT or CTRL key down")
+End If
+
+' Get target occurrence
+Dim oTargetOcc As ComponentOccurrence = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kAssemblyOccurrenceFilter, "Select source occurrence")
+
+' Check that an object was selected
+If oTargetOcc Is Nothing Then 
+	MessageBox.Show("Nothing was selected","Selection Cancelled")
+	Exit Sub
+End If
+
+' Replace occurrence (False is single occurrence, True is all occurrences)
+Call oTargetOcc.Replace(oSrcOcc.ReferencedDocumentDescriptor.FullDocumentName, False)
