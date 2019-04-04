@@ -1,0 +1,25 @@
+'Notes:
+'There are many document type enumerators available to use. Search Inventor programming help for full list
+
+'Example 1
+' Check document type
+If ThisApplication.ActiveDocumentType <> DocumentTypeEnum.kAssemblyDocumentObject Then
+	MessageBox.Show ("Wrong document type detected","Document Type")
+	Exit Sub
+End If
+
+'Example 2
+' Check document type
+Select Case ThisApplication.ActiveDocumentType
+	Case DocumentTypeEnum.kDrawingDocumentObject
+		MessageBox.Show ("A Drawing Document is open","Document Type")
+	Case DocumentTypeEnum.kAssemblyDocumentObject
+		MessageBox.Show ("An Assembly Document is open","Document Type")
+	Case DocumentTypeEnum.kPartDocumentObject
+		MessageBox.Show ("A Part Document is open","Document Type")
+	Case DocumentTypeEnum.kNoDocument
+		MessageBox.Show ("No documents are open","Document Type")
+	Case Else
+		MessageBox.Show ("A Drawing/Assembly/Part Document must be open","Document Type")
+	' Do something
+End Select
