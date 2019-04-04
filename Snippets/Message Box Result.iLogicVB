@@ -1,0 +1,13 @@
+' Create dialog result object
+Dim oResult As DialogResult
+oResult = MessageBox.Show("Message","Title",MessageBoxButtons.YesNoCancel)
+
+' Check what messagebox result was
+Select Case oResult
+	Case DialogResult.Yes
+		MessageBox.Show("Yes")
+	Case DialogResult.No
+		MessageBox.Show("No")
+	Case DialogResult.Cancel
+		MessageBox.Show("Cancel")
+End Select
