@@ -1,0 +1,103 @@
+'AddReference "filename.dll"
+Imports System.Windows.Forms
+AddReference "System.Drawing.dll"
+Imports System.Drawing
+'AddVbRule "Other Rule"
+'AddVbFile "filename.vb"
+'AddResources "filename.resources"
+
+Public Sub Main()
+	Dim myfrm As New Form
+	Dim myfnt As Font = New Drawing.Font("Arial",50, FontStyle.Bold)
+	
+	Dim Button1 As New Button()
+	With Button1
+		.Font = myfnt
+		.Text = "◢"
+		.Width = 100
+		.Height = 100
+		.Top = 25
+		.Left = 25
+	End With
+	
+	'Add your Event handler
+	AddHandler Button1.Click, AddressOf Button1_Click  
+
+	Dim Button2 As New Button()
+	With Button2
+		.Font = myfnt
+		.Text = "◣"
+		.Width = 100
+		.Height = 100
+		.Top = 25
+		.Left = 150
+	End With
+	'Add your Event handler
+	AddHandler Button2.Click, AddressOf Button2_Click 
+
+	Dim Button3 As New Button()
+	With Button3
+		.Font = myfnt
+		.Text = "◤"
+		.Width = 100
+		.Height = 100
+		.Top = 150
+		.Left = 25
+	End With
+	'Add your Event handler
+	AddHandler Button3.Click, AddressOf Button3_Click 
+	
+	Dim Button4 As New Button()
+	With Button4
+		.Font = myfnt
+		.Text = "◥"
+		.Width = 100
+		.Height = 100
+		.Top = 150
+		.Left = 150
+	End With
+	'Add your Event handler
+	AddHandler Button4.Click, AddressOf Button4_Click 
+	
+	myfrm.Controls.Add(Button1)
+	myfrm.Controls.Add(Button2)
+	myfrm.Controls.Add(Button3)
+	myfrm.Controls.Add(Button4)
+	
+	Dim tb1 As New Textbox()
+	With tb1
+		.Text = "Testing"
+		.top = 10
+	End With
+	
+	Dim oPB As New ProgressBar()
+	With oPB
+		.top = 150
+		.left = 25
+		.Width = 150
+		.Minimum = 0
+		.Maximum = 100
+		.Value = 20
+	End With
+	myfrm.Text = "my text here"
+	myfrm.TopMost = True
+	myfrm.controls.add(tb1)
+	myfrm.controls.add(oPB)
+	
+	myfrm.Show
+End Sub
+
+
+
+Private Sub Button1_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
+	MessageBox.Show("test 1")
+End Sub
+Private Sub Button2_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
+	'MessageBox.Show(myfrm.tb1.text)
+End Sub
+Private Sub Button3_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
+	'MessageBox.Show(myfrm.tb1.text)
+End Sub
+Private Sub Button4_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
+	'MessageBox.Show(myfrm.tb1.text)
+End Sub
