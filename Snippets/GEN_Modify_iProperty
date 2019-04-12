@@ -1,0 +1,17 @@
+Sub Modify_iProperty(ByRef oDoc As Document, ByVal strPropset As String, ByVal strProp As String, ByVal strValue As String)
+
+	' This sub checks if an iproperty exists before creating / modifying it.
+	' If this check isn't done it can throw an error if you try modify a non-existant property
+	
+	'define property collection
+	Dim oPropSet As PropertySet = oDoc.PropertySets(strPropset)
+
+	Try
+				'set custom property value
+				oPropSet.Item(strProp).Value = strValue
+	Catch
+				' Assume error means not found so create it
+				oPropSet.Add(strValue, strProp)
+	End Try
+	
+End Sub
