@@ -1,30 +1,61 @@
-' Check document type
-' HERE
-ThisApplication.StatusBarText = "Test"
-Dim oDoc As AssemblyDocument = ThisApplication.ActiveDocument
+' Determines if it replaces all occurrences or not
+Dim bReplaceAll As Boolean = False
 
-' Get source occurrence
-Dim oSrcOcc As ComponentOccurrence = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kAssemblyOccurrenceFilter, "Select source occurrence")
+' Get user input for replacing all
+Dim oResult As DialogResult
+oResult = MessageBox.Show("Do you want to replace all occurrences?","Quick Replace",MessageBoxButtons.YesNoCancel)
 
-' Check that an object was selected
-If oSrcOcc Is Nothing Then 
-	MessageBox.Show("Nothing was selected","Selection Cancelled")
-	Exit Sub
-End If
+' Check what messagebox result was
+Select Case oResult
+	Case DialogResult.Yes
+		bReplaceAll = True
+	Case DialogResult.No
+		bReplaceAll = False
+	Case Else
+		Exit Sub
+End Select
 
-' Add this to selection loop
-If My.Computer.Keyboard.CtrlKeyDown Or My.Computer.Keyboard.ShiftKeyDown Then
-        MsgBox("SHIFT or CTRL key down")
-End If
-
-' Get target occurrence
-Dim oTargetOcc As ComponentOccurrence = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kAssemblyOccurrenceFilter, "Select source occurrence")
-
-' Check that an object was selected
-If oTargetOcc Is Nothing Then 
-	MessageBox.Show("Nothing was selected","Selection Cancelled")
-	Exit Sub
-End If
-
-' Replace occurrence (False is single occurrence, True is all occurrences)
-Call oTargetOcc.Replace(oSrcOcc.ReferencedDocumentDescriptor.FullDocumentName, False)
+Try
+	' Check active document type
+	If ThisApplication.ActiveDocumentType <> DocumentTypeEnum.kAssemblyDocumentObject Then
+		MessageBox.Show ("The active document is not an Assembly Document","Document Type Incorrect")
+		Exit Sub
+	End If
+	
+	' Get the source occrence and check something was selected
+	Dim oSourceOcc As ComponentOccurrence = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kAssemblyOccurrenceFilter, "Select source occurrence")
+	If oSourceOcc Is Nothing Then Exit Sub
+	
+	' Define the replace occurence
+	Dim oReplaceOcc As ComponentOccurrence
+	
+	' Set first run
+	Dim bFirstRun As Boolean = True
+	
+	' Checks if control is held down, if so, keep adding to collection
+	Do While My.Computer.Keyboard.CtrlKeyDown = True Or bFirstRun = True
+	
+	' Clear indicator
+	bFirstRun = False
+	
+	' Clear previous selection
+	oReplaceOcc = Nothing
+	
+	' Start occurence selection
+	oReplaceOcc = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kAssemblyOccurrenceFilter, "Select target occurrence, hold down CTRL to multi select")
+	
+	' Check if occurence was selected, exit loop if not
+	If oReplaceOcc Is Nothing Then Exit Do
+	If oReplaceOcc.IsPatternElement Or oReplaceOcc.IsSubstituteOccurrence Or oReplaceOcc.Suppressed Then
+		MessageBox.Show("Pattern / Suppressed / Substitute elements can't be replaced")
+		Continue Do ' This will skip this selection and restart the do event
+	End If
+	
+	' Replace document
+	oReplaceOcc.Replace(oSourceOcc.ReferencedDocumentDescriptor.ReferencedDocument.FullFileName, bReplaceAll)
+	
+	Loop
+	
+Catch Ex As Exception
+	MessageBox.Show(Ex.Message, "Quick Replace")
+End Try
