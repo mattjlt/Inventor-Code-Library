@@ -23,3 +23,34 @@ Select Case ThisApplication.ActiveDocumentType
 		MessageBox.Show ("A Drawing/Assembly/Part Document must be open","Document Type")
 	' Do something
 End Select
+
+'Example 3
+' This lets you check the active document in a single line with a feedback messagebox using a function, usage as below
+'If CheckActiveDocument(DocumentTypeEnum.kAssemblyDocumentObject) = False Then Exit Sub
+
+Public Function CheckActiveDocument(ByVal DocType As Inventor.DocumentTypeEnum) As Boolean
+
+    Dim strType As String = ""
+
+    Select Case DocType
+        Case DocumentTypeEnum.kAssemblyDocumentObject
+            strType = "Assembly Document"
+        Case DocumentTypeEnum.kDrawingDocumentObject
+            strType = "Drawing Document"
+        Case DocumentTypeEnum.kPartDocumentObject
+            strType = "Part Document"
+    End Select
+
+    If ThisApplication.Documents.Count < 0 Then
+        MessageBox.Show("There are no documents open")
+        Return False
+    End If
+
+    If ThisApplication.ActiveDocumentType <> DocType Then
+        MessageBox.Show("The active document is not a " & strType)
+        Return False
+    Else
+        Return True
+    End If
+
+End Function
