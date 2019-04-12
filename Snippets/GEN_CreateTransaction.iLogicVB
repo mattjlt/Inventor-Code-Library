@@ -1,0 +1,12 @@
+' This will create a new transaction to contain multiple commands into one single transaction for undo
+
+' Start a new transaction
+Dim oTrans As Transaction = ThisApplication.TransactionManager.StartTransaction(oDoc, "CustomTransactionName")
+
+' *******
+' Do work here to be contained within transaction
+' *******
+
+' End the transaction
+oTrans.End
+
