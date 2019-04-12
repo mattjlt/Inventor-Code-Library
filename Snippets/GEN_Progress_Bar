@@ -1,0 +1,63 @@
+Imports System.Windows.Forms
+
+Public Sub Main
+	Dim myfrm As New Form
+	Dim oPB As New ProgressBar()
+	' add progress bar label e.g. xx of xx complete
+	With oPB
+		.top = 150
+		.left = 25
+		.Width = 150
+		.Minimum = 0
+		.Maximum = 100
+		.Value = 0
+	End With
+	
+	With myfrm
+		.Text = "Progress Indicator"
+		.TopMost = True
+		.controls.add(oPB)
+		.Show
+	End With
+	
+	For i = oPB.Minimum To oPB.Maximum Step 5
+		'Sleep
+		Threading.Thread.Sleep(100) ' 100 milliseconds = 0.1 seconds
+		oPB.Value = i
+	Next
+	
+	MessageBox.Show("TaskComplete")
+	myfrm.Close
+	
+	Exit Sub
+	
+End Sub
+
+'
+
+'Public Class Form1
+'
+'   Private Sub Form1_Load(sender As Object, e As EventArgs) _
+'      Handles MyBase.Load
+'      'create two progress bars
+'      Dim ProgressBar1 As ProgressBar
+'      Dim ProgressBar2 As ProgressBar
+'      ProgressBar1 = New ProgressBar()
+'      ProgressBar2 = New ProgressBar()
+'      'set position
+'      ProgressBar1.Location = New Point(10, 10)
+'      ProgressBar2.Location = New Point(10, 50)
+'      'set values
+'      ProgressBar1.Minimum = 0
+'      ProgressBar1.Maximum = 200
+'      ProgressBar1.Value = 130
+'      ProgressBar2.Minimum = 0
+'      ProgressBar2.Maximum = 100
+'      ProgressBar2.Value = 40
+'      'add the progress bar to the form
+'      Me.Controls.Add(ProgressBar1)
+'      Me.Controls.Add(ProgressBar2)
+'      ' Set the caption bar text of the form.  
+'      Me.Text = "my text here"
+'   End Sub
+'End Class
