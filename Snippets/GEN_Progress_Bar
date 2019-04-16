@@ -1,29 +1,54 @@
 Imports System.Windows.Forms
+AddReference "System.Drawing.dll"
 
 Public Sub Main
 	Dim myfrm As New Form
-	Dim oPB As New ProgressBar()
+	Dim oPB As New ProgressBar
 	' add progress bar label e.g. xx of xx complete
 	With oPB
-		.top = 150
-		.left = 25
-		.Width = 150
+		'.Anchor = anchorStyles.Top
+		.top = 70
+		.left = 40
+		.Width = 200
 		.Minimum = 0
 		.Maximum = 100
 		.Value = 0
 	End With
 	
+	Dim oLbl As New Label
+	With oLbl
+		.Top = 25
+		.Left = 40
+		.AutoSize = False
+		.Width = 200
+		.BackColor = Transparent
+		'.TextAlign = ContentAlignment.MiddleCenter
+		.Text = "My PlaceHolder Text Here"
+	End With
+	
 	With myfrm
+		.FormBorderStyle = FormBorderStyle.FixedToolWindow 'Fixed3D / FixedDialog / FixedSingle / FixedToolWindow / None / Sizable / SizableToolWindow
+		'.MaximizeBox = False
+		'.MinimizeBox = False
+		.StartPosition = FormStartPosition.CenterScreen
+		
+		.Width = 300
+		.Height = 150
 		.Text = "Progress Indicator"
 		.TopMost = True
 		.controls.add(oPB)
+		.controls.add(oLbl)
 		.Show
+		.Update ' This forces form to refresh (fixes labels not correctly displaying / displaying as white)
 	End With
+
 	
 	For i = oPB.Minimum To oPB.Maximum Step 5
 		'Sleep
 		Threading.Thread.Sleep(100) ' 100 milliseconds = 0.1 seconds
 		oPB.Value = i
+		oLbl.Text = "Status: " & oPB.Value & " of " & oPB.Maximum & " Complete"
+		myfrm.Update  ' This forces form to refresh label
 	Next
 	
 	MessageBox.Show("TaskComplete")
