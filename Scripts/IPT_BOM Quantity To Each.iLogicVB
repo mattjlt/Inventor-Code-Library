@@ -1,0 +1,17 @@
+' Notes:
+' This rule changes the BOM Qty Type to Each.
+
+	' Check active document type
+If ThisApplication.ActiveDocumentType <> DocumentTypeEnum.kPartDocumentObject Then
+	MessageBox.Show ("The active document is not a Part Document","Document Type Incorrect")
+	Exit Sub
+End If
+  
+  ' Get document
+Dim oDoc As PartDocument = ThisDoc.Document
+  
+' Access component definition
+Dim oCompDef As ComponentDefinition = oDoc.ComponentDefinition
+  
+' Change Qty Type to BOM
+oCompDef.BOMQuantity.SetBaseQuantity(BOMQuantityTypeEnum.kEachBOMQuantity) 
