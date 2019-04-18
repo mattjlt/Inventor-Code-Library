@@ -6,7 +6,18 @@ Imports System.Drawing
 'AddVbFile "filename.vb"
 'AddResources "filename.resources"
 
+Public Class Class1
+
+#Region "Global_Variables"
+
+    Public Shared strMyResult As String = "Not Set"
+
+#End Region
+
+
 Public Sub Main()
+	'Dim strResult As String = ""
+
 	Dim myfrm As New Form
 	Dim myfnt As Font = New Drawing.Font("Arial",50, FontStyle.Bold)
 	
@@ -58,46 +69,113 @@ Public Sub Main()
 	End With
 	'Add your Event handler
 	AddHandler Button4.Click, AddressOf Button4_Click 
-	
-	myfrm.Controls.Add(Button1)
-	myfrm.Controls.Add(Button2)
-	myfrm.Controls.Add(Button3)
-	myfrm.Controls.Add(Button4)
-	
-	Dim tb1 As New Textbox()
-	With tb1
-		.Text = "Testing"
-		.top = 10
+'		
+'	Dim tb1 As New Textbox()
+'	With tb1
+'		.Text = "Testing"
+'		.top = 10
+'	End With
+'		
+	With myfrm
+		' Set up form	
+		.FormBorderStyle = FormBorderStyle.FixedToolWindow 'Fixed3D / FixedDialog / FixedSingle / FixedToolWindow / None / Sizable / SizableToolWindow
+		'.MaximizeBox = False
+		'.MinimizeBox = False
+		.StartPosition = FormStartPosition.CenterScreen
+		'.Width = 300
+		'.Height = 150
+		.TopMost = True
+		.Text = "Slope Calculator"
+		.Name = "Slope Calculator"
+		
+		' Add controls
+		.Controls.Add(Button1)
+		.Controls.Add(Button2)
+		.Controls.Add(Button3)
+		.Controls.Add(Button4)
 	End With
+
+	myfrm.ShowDialog()
 	
-	Dim oPB As New ProgressBar()
-	With oPB
-		.top = 150
-		.left = 25
-		.Width = 150
-		.Minimum = 0
-		.Maximum = 100
-		.Value = 20
-	End With
-	myfrm.Text = "my text here"
-	myfrm.TopMost = True
-	myfrm.controls.add(tb1)
-	myfrm.controls.add(oPB)
+	MessageBox.Show(strMyResult)
+'	' Use show dialog not just show so it's called up as modal form
+'	Select Case myfrm.ShowDialog()
+'		Case CustomDialogResult.Slope1
+'			MessageBox.Show("Slope Type 1")
+'		Case CustomDialogResult.Slope2
+'			MessageBox.Show("Slope Type 2")
+'		Case CustomDialogResult.Slope3
+'			MessageBox.Show("Slope Type 3")
+'		Case CustomDialogResult.Slope4
+'			MessageBox.Show("Slope Type 4")
+'		Case Else
+'			MessageBox.Show("Invalid selection")
+'			Exit Sub
+'	End Select
 	
-	myfrm.Show
 End Sub
 
 
 
 Private Sub Button1_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
-	MessageBox.Show("test 1")
+	strMyResult = "AAAA"
+	sender.parent.Close
+	'MessageBox.Show("test 1")
+	'strResult = "btn 1"
 End Sub
 Private Sub Button2_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
+	strMyResult = "BBBB"
+	sender.parent.Close
+	'MessageBox.Show(sender.gettype.tostring)
+	'MessageBox.Show(sender.parent.Name)
+	'DirectCast(DirectCast(sender, System.Windows.Forms.Timer).Tag
+	'myfrm.DialogResult = CustomDialogResult.Slope4
 	'MessageBox.Show(myfrm.tb1.text)
 End Sub
 Private Sub Button3_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
+	strMyResult = "CCCC"
+	sender.parent.Close
 	'MessageBox.Show(myfrm.tb1.text)
 End Sub
 Private Sub Button4_Click(ByVal sender As System.Object, ByVal e As System.EventArgs)
+	strMyResult = "DDDD"
+	sender.parent.Close
 	'MessageBox.Show(myfrm.tb1.text)
 End Sub
+
+Public Enum CustomDialogResult
+        Slope1
+        Slope2
+        Slope3
+        Slope4
+End Enum
+
+End Class
+'EXAMPLE Of PASSING SENDER OBJECT TO FORM
+
+'Public Class Form1
+'
+'    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+'        Dim frmNew As New Form
+'        Dim Label2 As New Label()
+'        frmNew.Controls.Add(Label2)
+'        Dim tmr As New System.Windows.Forms.Timer
+'        AddHandler tmr.Tick, AddressOf tmr_Tick
+'        tmr.Tag = New Tuple(Of Control, Control)(frmNew, Label2)
+'        tmr.Interval = 1000
+'        tmr.Start()
+'        frmNew.Text = Date.Now
+'        Label2.Text = Date.Now
+'        frmNew.Show()
+'    End Sub
+'
+'    Private Sub tmr_Tick(sender As Object, e As EventArgs)
+'        Dim T As Tuple(Of Control, Control) = DirectCast(DirectCast(sender, System.Windows.Forms.Timer).Tag, Tuple(Of Control, Control))
+'        Dim frm As Form = DirectCast(T.Item1, Form)
+'        Dim lbl As Label = DirectCast(T.Item2, Label)
+'        Dim curTime As String = DateTime.Now.ToString("h:mm:ss tt")
+'        frm.Text = curTime
+'        lbl.Text = curTime
+'    End Sub
+'
+'End Class
