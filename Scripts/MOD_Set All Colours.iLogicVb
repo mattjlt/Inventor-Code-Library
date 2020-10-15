@@ -1,5 +1,13 @@
-﻿Imports System.Windows.Forms
+Imports System.Windows.Forms
 Imports System.Drawing
+' Title: Set All Colours
+' Description: Change all parts to be the same colour
+' Version: 0.2
+
+' Notes:
+' - Add option to remove part body + feature overrides - added but currently testing
+
+
 Public Class RunMyForm
 	
 	Private Sub Main
@@ -24,6 +32,9 @@ Public Class RunMyForm
 		' Get list of active library appearances
 		Dim appearanceList As New List(Of String)
 		
+		'ThisApplication.AssetLibraries.Item("Favourites")
+		'ThisApplication.AssetLibraries.Item("Autodesk Appearance Library")
+		
 		' Iterate through all active render styles
 		For Each oRS As RenderStyle In oDoc.RenderStyles
 			' Add render style name to list
@@ -35,12 +46,14 @@ Public Class RunMyForm
 		
 		Dim strAppearance As String = ""
 		Dim bClearOverride As Boolean = True
+		Dim bClearAppearanceOverride As Boolean = False
 		
 		' Display the custom form result
 		If (myfrm.ShowDialog() = DialogResult.OK) Then
 			' Use ShowDialog so it waits for user / form close before continuing
         	strAppearance = myfrm.myResult
 			bClearOverride = myfrm.bOverride
+			bClearAppearanceOverride = myfrm.bClearAppearanceOverride
 		Else
 			' Do nothing if dialog was cancelled
 			Exit Sub
@@ -112,6 +125,9 @@ Public Class RunMyForm
 				
 			End If
 			
+			' Clear appearance overrides if selected
+			If bClearOverride Then oPartDoc.ComponentDefinition.ClearAppearanceOverrides()
+				
 			' Create new instance of render style
 			Dim oNewColor As RenderStyle = oPartDoc.RenderStyles.Item(strAppearance)
 			
@@ -133,6 +149,7 @@ Public Class CustomForm
 	
 	Public myResult As String = "Not Set"
 	Public bOverride As Boolean = True
+	Public bClearAppearanceOverride As Boolean = False ' Default to false as it's not always needed
 	
 	Public Sub New(ByRef appearanceList As List(Of String))
 		
@@ -146,7 +163,7 @@ Public Class CustomForm
 			'.MinimizeBox = False
 			.StartPosition = FormStartPosition.CenterScreen
 			.Width = 300
-			.Height = 150
+			.Height = 175
 			.TopMost = True
 			.Text = "Set Part Colours"
 			.Name = "Set Part Colours"
@@ -191,16 +208,29 @@ Public Class CustomForm
 			.Left = 25
 			.Checked = True
 		End With
+		
+		Dim CheckBox2 As New CheckBox()
+		With CheckBox2
+			.Name = "check_override"
+			.Text = "Remove appearance overrides"
+			.Width = 225
+			.Top = 75
+			.Left = 25
+			.Checked = False
+		End With
+		
 
 		'Add your Event handler
 		AddHandler Button1.Click, AddressOf Button1_Click  
 		AddHandler ComboBox1.KeyPress, AddressOf ComboBox1_KeyPress
 		AddHandler CheckBox1.CheckedChanged, AddressOf CheckBox1_CheckedChanged
+		AddHandler CheckBox2.CheckedChanged, AddressOf CheckBox2_CheckedChanged
 		
 		'Add controls to form
 		oForm.Controls.Add(Button1)
 		oForm.Controls.Add(ComboBox1)
 		oForm.Controls.Add(CheckBox1)
+		oForm.Controls.Add(CheckBox2)
 		
 		' Set default dialog result
 		Me.DialogResult = System.Windows.Forms.DialogResult.None
@@ -237,6 +267,11 @@ Public Class CustomForm
 	Private Sub CheckBox1_CheckedChanged(ByVal sender As System.Object, ByVal E As EventArgs)
 		Dim check1 As CheckBox = Me.Controls.Item("check_colour")
 		bOverride = check1.Checked
+	End Sub
+	
+	Private Sub CheckBox2_CheckedChanged(ByVal sender As System.Object, ByVal E As EventArgs)
+		Dim check1 As CheckBox = Me.Controls.Item("check_override")
+		bClearAppearanceOverride = check1.Checked
 	End Sub
 	
 	Private Sub ComboBox1_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs)
