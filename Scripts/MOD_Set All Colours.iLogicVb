@@ -6,6 +6,7 @@ Imports System.Drawing
 
 ' Notes:
 ' - Add option to remove part body + feature overrides - added but currently testing
+' - The only errors encountered so far are when a derived part has errors (crashed features) and needs updating
 
 
 Public Class RunMyForm
@@ -291,5 +292,3 @@ Public Class CustomForm
 End Sub
 
 End Class
-	
-
