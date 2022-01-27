@@ -1,0 +1,144 @@
+﻿Imports ACW = Autodesk.Connectivity.WebServices
+Imports VDF = Autodesk.DataManagement.Client.Framework 
+Imports VB = Connectivity.Application.VaultBase
+AddReference "Autodesk.Connectivity.WebServices.dll"
+AddReference "Autodesk.DataManagement.Client.Framework.Vault.dll"
+AddReference "Connectivity.Application.VaultBase.dll"
+
+' Title: Vault Where Used
+' Description: Look for the first assembly in a drawing document and search vault for any parent assemblies it has been used in.
+' Version: 0.1
+
+' Notes:
+' -
+
+Class LocalWorkspaceCheck
+
+	Sub Main
+		' Check this is a drawing document
+		If ThisApplication.ActiveDocumentType <> Inventor.DocumentTypeEnum.kDrawingDocumentObject Then
+			MessageBox.Show("A drawing document must be open","Document Type Check")
+			Exit Sub
+		End If
+		
+		' Option 1 - Get working directory from active vault project
+		Dim WorkingDir As String = System.IO.Directory.GetParent(ThisApplication.DesignProjectManager.ActiveDesignProject.WorkspacePath).FullName & "\"
+
+		' Option 2 - Manually set vault working directory
+		'Dim WorkingDir As String = "C:\Inbye\"
+		
+		' Option 3 - Below line only work as in-process addin / not in ilogic
+		'Dim WorkingDir As String = mVltCon.WorkingFoldersManager.GetWorkingFolder("$").ToString  & "\"
+	
+		
+		' Create connection to vault
+		Dim mVltCon As VDF.Vault.Currency.Connections.Connection = VB.ConnectionManager.Instance.Connection
+
+		' Check connection was valid
+		If mVltCon Is Nothing Then Exit Sub
+		
+		' Get active document
+		Dim oDoc As Inventor.DrawingDocument = ThisApplication.ActiveDocument
+		
+		' Define filename object
+		Dim strFilename As String = ""
+		
+		' Search through referenced documents to get the referenced docs
+		For Each oRefDoc As Inventor.Document In oDoc.ReferencedDocuments
+			' Filter selection for only assemblies / only get the first one
+			If oRefDoc.DocumentType = Inventor.DocumentTypeEnum.kAssemblyDocumentObject Then
+				' Get filename of assembly document
+				strFilename = oRefDoc.FullFileName
+				Exit For	' Exit for loop now it is set
+			End If
+		Next
+		
+		' Check filename was set
+		If strFilename = "" Then
+			MessageBox.Show("No assembly reference found","Find referenced components")
+			Exit Sub
+		End If
+
+		' Define new ACW file object and retrieve target file from vault using function
+		Dim Item As ACW.File() = Search_Vault_by_FilePath(strFilename, WorkingDir)
+
+		' Create new file relationship setting object / include parents (because we are getting where used)
+		Dim myFileRelationshipSettings As VDF.Vault.Settings.FileRelationshipGatheringSettings = New VDF.Vault.Settings.FileRelationshipGatheringSettings
+		myFileRelationshipSettings.IncludeParents = True
+
+		' Retrieve file associations from vault
+		Dim relatedfileassoc = mVltCon.FileManager.GetFileAssociationLites(New Long() {Item(0).Id }, myFileRelationshipSettings)
+
+		' Create a list of strigns to store filenames / where used.
+		Dim whereused As New List(Of String)
+		
+		' Create file association object
+		Dim fileassoc As acw.FileAssocLite
+		
+		' Iterate through all file associations
+		For Each fileassoc In relatedfileassoc
+			' Get related file from association / retrieve from vault using file id from file association object
+			Dim relatedfile As ACW.File = mVltCon.WebServiceManager.DocumentService.GetFileById(fileassoc.ParFileId)
+			
+			' Filter list to show only assembly parents, otherwise drawings and presentations will show up
+			If System.IO.Path.GetExtension(relatedfile.Name).ToLower = ".iam" Then
+				' Add to list without extension
+				whereused.Add(System.IO.Path.GetFileNameWithoutExtension(relatedfile.Name))
+				'whereused.Add(relatedfile.Name)
+			End If
+		Next
+		
+		' Create new stringbuilder
+		Dim strMessage As New System.Text.StringBuilder
+		With strMessage
+			.AppendLine("Filename:")
+			.AppendLine(strFilename)
+			.AppendLine("")
+			.AppendLine("Where used:")
+			.AppendLine(Strings.Join(whereused.ToArray, ControlChars.NewLine))
+			.AppendLine("")
+			.AppendLine("Values copied to clipboard")
+		End With
+		
+		' Display prompt of assembly filename + where used
+		MessageBox.Show(strMessage.ToString,"Where Used")
+
+		' Copy where used to clipboard
+		Clipboard.SetText(Strings.Join(whereused.ToArray, ControlChars.NewLine))
+		
+	'	' This section will get child part information
+	'	Dim myFileRelationshipSettings2 As VDF.Vault.Settings.FileRelationshipGatheringSettings = New VDF.Vault.Settings.FileRelationshipGatheringSettings
+	'	myFileRelationshipSettings2.IncludeChildren = True
+	'	myFileRelationshipSettings2.IncludeLibraryContents = True
+
+	'	Dim relatedfileassoc2 = mVltCon.FileManager.GetFileAssociationLites(New Long() {Item(0).Id}, myFileRelationshipSettings2)
+
+	'	Dim children As New List(Of String)
+
+	'	For Each fileassoc In relatedfileassoc2
+	'		Dim relatedfile As ACW.File = mVltCon.WebServiceManager.DocumentService.GetFileById(fileassoc.CldFileId)
+	'		children.Add(relatedfile.Name)
+	'	Next
+
+	'	MsgBox(Filename & vbNewLine & "Children " & vbNewLine & vbNewLine & Strings.Join(children.ToArray, vbNewLine))
+	End Sub
+
+    Function Search_Vault_by_FilePath(filePath As String, LocalWorkspace As String) As ACW.File()
+		' Get and check vault connection is valid
+        Dim mVltCon As VDF.Vault.Currency.Connections.Connection = VB.ConnectionManager.Instance.Connection
+        If mVltCon Is Nothing Then Return Nothing
+		
+		' Replace vault path slashes / format
+        Dim VaultPath As String = filePath.Replace(LocalWorkspace, "$/").Replace("\", "/")
+		
+		' Get results / files from vault
+        Dim Results As ACW.File() = mVltCon.WebServiceManager.DocumentService.FindLatestFilesByPaths(New String() {VaultPath})
+
+		' Check results are valid / not empty
+        If (Results(0).Id = -1) Then Return Nothing
+
+		' Return collection of files / results
+        Return Results
+		
+    End Function
+End Class
