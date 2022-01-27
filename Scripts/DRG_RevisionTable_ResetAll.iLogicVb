@@ -1,0 +1,121 @@
+﻿' Title: Drawing - Revision Table - Reset All
+' Description: Reset all revision tables and clear revision tags
+' Version: 0.1
+
+' Notes:
+' Because revision tags are linked to the tables, a blank row has to be added so that each row can be deleted.
+' As each row is deleted, the related revision tags are also removed. If this isnt done, when the rev table is deleted entirely the rev tags are left behind.
+' This will only get the first revision table as by default all sheets / tables are linked.
+' If you have independant tables / not linked on each sheet, the code will need adjusting
+
+' Check this is a drawing document
+If ThisApplication.ActiveDocumentType <> Inventor.DocumentTypeEnum.kDrawingDocumentObject Then
+	MessageBox.Show("A drawing document needs to be open")
+	Exit Sub
+End If
+
+' Get the active document
+Dim oDoc As DrawingDocument = ThisApplication.ActiveDocument
+
+' Setting the found flag
+Dim bFound As Boolean = False
+
+' Iterate through all sheets
+For Each oSheet As Inventor.Sheet In oDoc.Sheets
+	
+	' Check flag
+	If bFound = True Then Exit For
+		
+	' Get the first revision table
+	For Each oRT As Inventor.RevisionTable In oSheet.RevisionTables
+		
+		' Found rev table, set flag
+		bFound = True
+		
+		'Define the rev table rows collection
+		Dim oRows As Inventor.RevisionTableRows  = oRT.RevisionTableRows
+
+		'Add new rev row, so that the old rows can be deleted	
+		oRows.Add() 
+
+		'Iterate through and check all of the rows in the rev table
+		For Each oRow As Inventor.RevisionTableRow In oRows
+			If oRow.IsActiveRow Then 
+				'Do nothing for the active row, this is the new row that was just added above
+			Else
+				oRow.Delete 'Delete the row - This alsodeletes the revision tags on the sheets
+			End If
+		Next
+		
+		' Already found the first table so dont need anymore
+		Exit For
+	Next
+Next
+
+' Set rev number/letter back to default
+iProperties.Value("Project", "Revision Number") = "0"
+
+' Now all revision rows and tags are deleted, delete all revision tables
+
+' Iterate through all sheets
+For Each oSheet As Inventor.Sheet In oDoc.Sheets
+	' Delete all revision tables
+	For Each oRT As Inventor.RevisionTable In oSheet.RevisionTables
+		oRT.Delete
+	Next
+Next
+
+'Dim oDoc.Sheets(1).Border.RangeBox.MinPoint.X
+'Dim x As Integer = oDoc.Sheets(1).Border.RangeBox.MinPoint.X + 0.8
+'Dim y As Integer = oDoc.Sheets(1).Border.RangeBox.MinPoint.Y + 0.8
+
+' Create new point for the revision table to be placed
+Dim oPoint As Inventor.Point2d = ThisApplication.TransientGeometry.CreatePoint2d(3, 3.704)
+
+' Assuming the style exists (Change the name of your revision table style to match)
+Dim oRTStyle As Inventor.RevisionTableStyle = oDoc.StylesManager.RevisionTableStyles.Item("Revision History Checked")
+
+' Iterate through all sheets
+For Each oSheet As Inventor.Sheet In oDoc.Sheets
+	' Skip un-used sheets
+	If oSheet.ExcludeFromCount Then Continue For
+	If oSheet.ExcludeFromPrinting Then Continue For
+	
+	' Activate the sheet
+	oSheet.Activate
+	
+	' Add revision table
+	oSheet.RevisionTables.Add2(oPoint, False, True, False, 0, oRTStyle)
+	
+	' Alternative option to add revision table but it doesnt specify any options / styles
+	'oSheet.RevisionTables.Add(oPoint)
+Next
+
+'Reactivate first sheet
+oDoc.Sheets(1).Activate
+
+' Reset flag for re-use
+bFound = False
+
+' Now the revision tables have been re-added, set the values of the first revision row
+
+' Iterate through all sheets
+For Each oSheet As Inventor.Sheet In oDoc.Sheets
+	' Skip if already found rev table
+	If bFound = True Then Exit For
+	
+	' This section will need to be changed to suit your revision table
+	For Each oRT As Inventor.RevisionTable In oSheet.RevisionTables
+		oRT.UpdatePropertyToRevisionNumber = True ' Links the revision to the rev table
+		'oRT.RevisionTableRows(1).Item(1).Text = "" This is typically the revision number
+		oRT.RevisionTableRows(1).Item(2).Text = "DESCRIPTION 123" ' DESCRIPTION
+		oRT.RevisionTableRows(1).Item(3).Text = ThisApplication.UserName ' BY
+		oRT.RevisionTableRows(1).Item(4).Text = "CHECKED 123" ' CHECKED BY
+		oRT.RevisionTableRows(1).Item(5).Text = Date.Today.ToShortDateString ' DATE
+		bFound = True
+		Exit For
+	Next
+Next
+
+' Update the document
+oDoc.Update
