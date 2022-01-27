@@ -1,3 +1,11 @@
+﻿' Title: Get View Sheet Positions
+' Description: Search through all sheets in drawing document for part document views
+' 	Get the Sheet number they are on and add it to a custom property inside the part.
+' Version: 0.1a
+
+' Notes:
+' In progress....
+
 Sub Main()
 
 Dim oDoc As DrawingDocument = ThisApplication.ActiveDocument

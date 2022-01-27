@@ -1,0 +1,50 @@
+﻿' Title: Part - Hide All Work Features
+' Description: Turn off all work features in part document
+' Version: 0.1
+
+' Notes:
+' -
+
+' Check a part document is active
+If ThisApplication.ActiveEditDocument.DocumentType <> DocumentTypeEnum.kPartDocumentObject Then
+	MessageBox.Show("A part document needs to be open")
+	Exit Sub
+End If
+
+' Get the active document
+Dim oDoc As PartDocument = ThisApplication.ActiveEditDocument
+
+' Check a document was set
+If oDoc Is Nothing Then
+	MessageBox.Show("No document found")
+	Exit Sub
+End If
+
+' Visibility flag
+Dim bVisible As Boolean = False
+Dim oResult As DialogResult = MessageBox.Show("Do you want to hide 'Yes' or show 'No' all work features","Hide work features" ,MessageBoxButtons.YesNoCancel)
+
+Select Case oResult
+	Case DialogResult.Yes : bVisible = False
+	Case DialogResult.No : bVisible = True
+	Case Else : Exit Sub
+End Select
+
+
+' Iterate though each workfeature type and hide
+For Each oWP As WorkPlane In oDoc.ComponentDefinition.WorkPlanes
+	oWP.Visible = bVisible
+Next
+
+For Each oWA As WorkAxis In oDoc.ComponentDefinition.WorkAxes
+	oWA.Visible = bVisible
+Next
+
+For Each oWP As WorkPoint In oDoc.ComponentDefinition.WorkPoints
+	oWP.Visible = bVisible
+Next
+
+For Each oWS As WorkSurface In oDoc.ComponentDefinition.WorkSurfaces
+	oWS.Visible = bVisible
+Next
+		
