@@ -1,0 +1,153 @@
+﻿Imports system.Windows.Forms
+' Title: Export Drawings To PDF + DXF
+' Description: This exports drawings to PDF + DXF 
+' Version: 0.1
+
+' Notes:
+' Export folders can be set below strFolderPDF & strFolderDXF
+
+Sub Main()
+	
+	' Check active document is a drawing
+	If ThisApplication.ActiveDocumentType <> Inventor.DocumentTypeEnum.kDrawingDocumentObject Then
+		MessageBox.Show("A drawing document need to be active", "Document Print Error")  :	Exit Sub
+	End If
+
+	' Check document has been saved (can't get a filname from a document not saved)
+	If ThisApplication.ActiveDocument.FullFileName = "" Then
+		MessageBox.Show("Drawing need to be saved before printing", "Document Print Error") : Exit Sub
+	End If
+
+	' Confirm user wants to Print drawings
+	If MessageBox.Show("This will export the active drawing" & ControlChars.NewLine & "Are you sure you want to continue?", "Confirmation", MessageBoxButtons.YesNo) <> DialogResult.Yes Then
+		Exit Sub
+	End If
+
+	' Get active document
+	Dim oDoc As DrawingDocument = ThisApplication.ActiveDocument
+
+	' Check if there is a referenced model, update mass if there is (prevents an error on sheets with no model)
+	If oDoc.ReferencedDocuments.Count > 1 Then
+		' Read the mass to prevent N/A issue / triggers generation of mass (This will crash on a presentation file)
+		Dim oMassStr As String = Round(ThisDrawing.ModelDocument.ComponentDefinition.MassProperties.Mass, 0)
+		' Update to trigger the change in the drawing
+		InventorVb.DocumentUpdate()
+	End If
+
+	' Get path + filename
+	Dim strFilename As String = System.IO.Path.GetFileNameWithoutExtension(oDoc.FullFileName)
+
+	' Get custom properties
+	Dim strRev As String = iProperties.Value("Project", "Revision Number")
+
+	' Check properties are valid
+	If strRev = "" Then MessageBox.Show("Revision property is not set", "Document Print Error") : Exit Sub
+
+	' Set output folder
+	Dim strFolderPDF As String = System.IO.Path.GetDirectoryName(oDoc.FullFileName) & "\PDF"
+	Dim strFolderDXF As String = System.IO.Path.GetDirectoryName(oDoc.FullFileName) & "\DXF"
+
+	Dim strFilenamePDF As String = strFolderPDF & "\" & strFilename & " REV" & strRev & ".pdf"
+	Dim strFilenameDXF As String = strFolderDXF & "\" & strFilename & " REV" & strRev & ".dxf"
+
+	'Run export commands
+	ExportPDF(oDoc,strFolderPDF,strFilenamePDF)
+	ExportDXF(oDoc, strFolderDXF, strFilenameDXF)
+
+	MessageBox.Show("Export Complete")
+	ThisApplication.StatusBarText = "Export Complete"
+
+End Sub
+
+Sub ExportPDF(ByRef oDoc As DrawingDocument,ByVal strfolder As String,ByVal strFilename As String)
+	
+	' Update status bar for user
+	ThisApplication.StatusBarText = "Exporting PDF"
+	
+	' Check PDF file exists, prompt user to continuet
+	If System.IO.File.Exists(strFilename) Then
+		If MessageBox.Show("PDF Exists, do you want to overwrite?", "Confirmation", MessageBoxButtons.YesNo) <> DialogResult.Yes Then
+			' Cancel printing, file exists
+			Exit Sub
+		End If
+	End If
+	
+	'Check for the PDF folder and create it if it does not exist
+	If Not System.IO.Directory.Exists(strfolder) Then System.IO.Directory.CreateDirectory(strfolder)
+		
+	' Get the PDF translator Add-In.
+	Dim PDFAddIn As TranslatorAddIn = ThisApplication.ApplicationAddIns.ItemById("{0AC6FD96-2F4D-42CE-8BE0-8AEA580399E4}")
+
+	' Create translatin context
+	Dim oContext As TranslationContext = ThisApplication.TransientObjects.CreateTranslationContext
+	oContext.Type = kFileBrowseIOMechanism
+
+	' Create a NameValueMap object
+	Dim oOptions As NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap
+
+	' Create a DataMedium object
+	Dim oDataMedium As DataMedium = ThisApplication.TransientObjects.CreateDataMedium
+
+	' Check whether the translator has 'SaveCopyAs' options
+	If PDFAddIn.HasSaveCopyAsOptions(oDoc, oContext, oOptions) Then
+	    'oOptions.Value("All_Color_AS_Black") = 0
+	    'oOptions.Value("Remove_Line_Weights") = 0
+	    'oOptions.Value("Vector_Resolution") = 400
+	    oOptions.Value("Sheet_Range") = kPrintAllSheets
+	    'oOptions.Value("Custom_Begin_Sheet") = 2 	' These arent used if you use kPrintAllSheets above
+	    'oOptions.Value("Custom_End_Sheet") = 4 	' These arent used if you use kPrintAllSheets above
+	End If
+
+	'Set the destination file name
+	oDataMedium.FileName = strFilename
+
+	'Publish document.
+	PDFAddIn.SaveCopyAs(oDoc, oContext, oOptions, oDataMedium)
+End Sub
+
+Sub ExportDXF(ByRef oDoc As DrawingDocument, ByVal strfolder As String, ByVal strFilename As String)
+
+	' Update status bar for user
+	ThisApplication.StatusBarText = "Exporting DXF"
+	
+	' Check DXF file exists, prompt user to continue
+	If System.IO.File.Exists(strFilename) Then
+		If MessageBox.Show("DXF Exists, do you want to overwrite?", "Confirmation", MessageBoxButtons.YesNo) <> DialogResult.Yes Then
+			' Cancel printing, file exists
+			Exit Sub
+		End If
+	End If
+
+	'Check for the PDF folder and create it if it does not exist
+	If Not System.IO.Directory.Exists(strfolder) Then System.IO.Directory.CreateDirectory(strfolder)
+	
+    ' Get the DXF translator Add-In.
+    Dim DXFAddIn As TranslatorAddIn = ThisApplication.ApplicationAddIns.ItemById("{C24E3AC4-122E-11D5-8E91-0010B541CD80}")
+
+	' Create translation context
+    Dim oContext As TranslationContext = ThisApplication.TransientObjects.CreateTranslationContext
+    oContext.Type = kFileBrowseIOMechanism
+
+    ' Create a NameValueMap object
+    Dim oOptions As NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap
+
+    ' Create a DataMedium object
+    Dim oDataMedium As DataMedium = ThisApplication.TransientObjects.CreateDataMedium
+
+	' No setting requirements, skip this and use default settings
+    ' Check whether the translator has 'SaveCopyAs' options
+'    If DXFAddIn.HasSaveCopyAsOptions(oDocument, oContext, oOptions) Then
+'        Dim strIniFile As String
+'        strIniFile = "C:\tempDXFOut.ini"
+
+'        ' Create the name-value that specifies the ini file to use.
+'        oOptions.Value("Export_Acad_IniFile") = strIniFile
+'    End If
+
+    'Set the destination file name
+    oDataMedium.FileName = strFilename
+
+    'Publish document.
+    DXFAddIn.SaveCopyAs(oDoc, oContext, oOptions, oDataMedium)
+End Sub
+
