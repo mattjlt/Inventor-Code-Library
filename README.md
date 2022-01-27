@@ -14,3 +14,5 @@ MOD - For Models (IAM + IPT)
 IAM - For Assembly Documents
 
 IPT - For Part Files
+
+VAULT - Vault Related
