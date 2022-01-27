@@ -1,0 +1,62 @@
+''' <summary>
+''' Updates the mass of all models used in a drawing, to prevent the 'N/A' mass display problem, then it updates the document to reflect mass changes
+''' </summary>
+''' <param name="oDoc">Target drawing document</param>
+''' <returns>Boolean if succeeded / fail</returns>
+
+Function DRG_UpdateMass(ByRef oDoc As DrawingDocument) As Boolean
+    ' It will Dirty the document files status so a save is needed after if you are checking in.
+
+    ' Check there is a model document to update (will throw an error if this isn't done)
+    If oDoc.ReferencedDocuments.Count = 0 Then Return False
+
+    ' Iterate though first level referenced documents (First level means the files placed directly on the drawing)
+    For Each oRefDoc As Inventor.Document In oDoc.ReferencedDocuments
+
+        ' If all drawings only had assembly as the main view wouldn't need to process parts aswell
+        ' Check it is an iam / ipt - not presentation
+        If oRefDoc.DocumentType <> Inventor.DocumentTypeEnum.kAssemblyDocumentObject AndAlso Inventor.DocumentTypeEnum.kPartDocumentObject Then
+            ' Not a model document so skip to next view
+            Continue For
+        End If
+
+        'Update ref Document - some documents don't have mass and it triggers an error if it's not there
+        oRefDoc.Update2(True)
+
+        ' Read the mass to prevent N/A issue / triggers generation of mass.
+        Dim oMassStr As String = ""
+        Dim oMassStr2 As String = ""
+        Dim bMassErr As Boolean = False
+
+        Try
+            oMassStr = oRefDoc.ComponentDefinition.MassProperties.Mass.ToString() ' This throws an error on some random assemblies, when mass doesn't exist for some reason
+            oMassStr2 = oRefDoc.PropertySets.Item("Design Tracking Properties").Item("Mass").Value / 1000
+        Catch
+            ' Do nothing, Know it throws a random error
+            bMassErr = True
+        End Try
+
+        ' Check both masses are the same, if not, needs an update
+        If bMassErr = True AndAlso oMassStr <> oMassStr2 Then
+            'Try update ref document again
+            oRefDoc.Update2(True)
+
+            Try
+                ' Re-get properties
+                oMassStr = oRefDoc.ComponentDefinition.MassProperties.Mass
+                oMassStr2 = oRefDoc.PropertySets.Item("Design Tracking Properties").Item("Mass").Value / 1000
+            Catch
+                ' Do nothing
+            End Try
+
+        End If
+
+    Next ' Next reference document
+
+    ' Update document (ignore errors)
+    oDoc.Update2(True)
+
+    ' Completed the process
+    Return True
+
+End Function
