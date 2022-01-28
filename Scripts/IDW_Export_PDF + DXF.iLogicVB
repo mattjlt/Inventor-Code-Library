@@ -1,7 +1,7 @@
 ﻿Imports system.Windows.Forms
 ' Title: Export Drawings To PDF + DXF
 ' Description: This exports drawings to PDF + DXF 
-' Version: 0.1
+' Version: 0.2
 
 ' Notes:
 ' Export folders can be set below strFolderPDF & strFolderDXF
@@ -42,7 +42,7 @@ Sub Main()
 
 	' Check properties are valid
 	If strRev = "" Then MessageBox.Show("Revision property is not set", "Document Print Error") : Exit Sub
-
+	
 	' Set output folder
 	Dim strFolderPDF As String = System.IO.Path.GetDirectoryName(oDoc.FullFileName) & "\PDF"
 	Dim strFolderDXF As String = System.IO.Path.GetDirectoryName(oDoc.FullFileName) & "\DXF"
@@ -59,6 +59,12 @@ Sub Main()
 
 End Sub
 
+''' <summary>
+''' Export Drawing to PDF
+''' </summary>
+''' <param name="oDoc">Target Document</param>
+''' <param name="strfolder">Target Folder</param>
+''' <param name="strFilename">Target Filename</param>
 Sub ExportPDF(ByRef oDoc As DrawingDocument,ByVal strfolder As String,ByVal strFilename As String)
 	
 	' Update status bar for user
@@ -90,9 +96,9 @@ Sub ExportPDF(ByRef oDoc As DrawingDocument,ByVal strfolder As String,ByVal strF
 
 	' Check whether the translator has 'SaveCopyAs' options
 	If PDFAddIn.HasSaveCopyAsOptions(oDoc, oContext, oOptions) Then
-	    'oOptions.Value("All_Color_AS_Black") = 0
-	    'oOptions.Value("Remove_Line_Weights") = 0
-	    'oOptions.Value("Vector_Resolution") = 400
+	    oOptions.Value("All_Color_AS_Black") = 1
+	    oOptions.Value("Remove_Line_Weights") = 1
+	    oOptions.Value("Vector_Resolution") = 400
 	    oOptions.Value("Sheet_Range") = kPrintAllSheets
 	    'oOptions.Value("Custom_Begin_Sheet") = 2 	' These arent used if you use kPrintAllSheets above
 	    'oOptions.Value("Custom_End_Sheet") = 4 	' These arent used if you use kPrintAllSheets above
@@ -105,6 +111,12 @@ Sub ExportPDF(ByRef oDoc As DrawingDocument,ByVal strfolder As String,ByVal strF
 	PDFAddIn.SaveCopyAs(oDoc, oContext, oOptions, oDataMedium)
 End Sub
 
+''' <summary>
+''' Export drawing to DXF
+''' </summary>
+''' <param name="oDoc">Target document</param>
+''' <param name="strfolder">Target folder</param>
+''' <param name="strFilename">Target filename</param>
 Sub ExportDXF(ByRef oDoc As DrawingDocument, ByVal strfolder As String, ByVal strFilename As String)
 
 	' Update status bar for user
@@ -134,15 +146,23 @@ Sub ExportDXF(ByRef oDoc As DrawingDocument, ByVal strfolder As String, ByVal st
     ' Create a DataMedium object
     Dim oDataMedium As DataMedium = ThisApplication.TransientObjects.CreateDataMedium
 
-	' No setting requirements, skip this and use default settings
-    ' Check whether the translator has 'SaveCopyAs' options
-'    If DXFAddIn.HasSaveCopyAsOptions(oDocument, oContext, oOptions) Then
-'        Dim strIniFile As String
-'        strIniFile = "C:\tempDXFOut.ini"
+	' Set INI file path
+	Dim iniPath As String = System.IO.Path.Combine(My.Computer.FileSystem.SpecialDirectories.MyDocuments, "DXF_Export.ini") ' My documents folder
+	'Dim iniPath As String = System.IO.Path.Combine(System.IO.Path.GetTempPath, "DXF_Export.ini") ' Temp folder
+	
+	' Check if INI exists, if not create it
+	If Not System.IO.File.Exists(iniPath) Then
+		' Create ini / exit if it fails
+		If CreateINIFile(iniPath) = False Then Exit Sub
+	End If
 
-'        ' Create the name-value that specifies the ini file to use.
-'        oOptions.Value("Export_Acad_IniFile") = strIniFile
-'    End If
+    ' Check whether the translator has 'SaveCopyAs' options
+    If DXFAddIn.HasSaveCopyAsOptions(oDoc, oContext, oOptions) Then
+
+        ' Create the name-value that specifies the ini file to use.
+        oOptions.Value("Export_Acad_IniFile") = iniPath
+
+    End If
 
     'Set the destination file name
     oDataMedium.FileName = strFilename
@@ -150,4 +170,85 @@ Sub ExportDXF(ByRef oDoc As DrawingDocument, ByVal strfolder As String, ByVal st
     'Publish document.
     DXFAddIn.SaveCopyAs(oDoc, oContext, oOptions, oDataMedium)
 End Sub
+
+''' <summary>
+''' Create a new INI file with the relevant export settings defined
+''' </summary>
+''' <param name="strPath">Target path</param>
+''' <returns>Boolean</returns>
+Function CreateINIFile(ByVal strPath As String) As Boolean
+
+    ' Save this to the temp folder
+    'Path.Combine(Path.GetTempPath(),"filename.ini")
+    'Dim filePath As String = System.IO.Path.Combine(My.Computer.FileSystem.SpecialDirectories.MyDocuments, "DXF_Export.ini")
+
+    ' Scale / Space Configuration options
+    '	                                SCALING	    SPACE
+    'Base View Scale - Model Space    = Geometry	Model
+    'Base View Scale - Layout         = Geometry	Layout
+    'Sheet Scale - Model Space        = Text	    Model
+    'Sheet Scale - Layout             = Text	    Layout
+    'Full Scale(1:  1) - Model Space  = Full	    Model
+
+    ' Create new string builder
+    Dim oSB As New System.Text.StringBuilder
+
+    ' Build INI file
+    With oSB
+        .AppendLine("[EXPORT SELECT OPTIONS]")
+        .AppendLine("AUTOCAD VERSION=AutoCAD 2000") ' AutoCAD 2000 | AutoCAD 2004 | AutoCAD 2007 | AutoCAD 2010 | AutoCAD 2013 | AutoCAD 2018
+        .AppendLine("CREATE AUTOCAD MECHANICAL=No")
+        .AppendLine("USE TRANSMITTAL=No")
+        .AppendLine("USE CUSTOMIZE=No")
+        .AppendLine("CUSTOMIZE FILE=\Design Data\DWG-DXF\FlatPattern.xml") 'C:\Users\Public\Documents\Autodesk\Inventor 2019\Design Data\DWG-DXF\FlatPattern.xml" 
+        .AppendLine("CREATE LAYER GROUP=No")
+        .AppendLine("PARTS ONLY=No")
+
+        .AppendLine("[EXPORT PROPERTIES]")
+        .AppendLine("SELECTED PROPERTIES=")
+
+        .AppendLine("[EXPORT DESTINATION]")
+        .AppendLine("SPACE=Model") ' Model | Layout
+        .AppendLine("SCALING=Geometry") ' Geometry | Text | Full
+        .AppendLine("ALL SHEETS=Yes") ' Yes | No
+        .AppendLine("MAPPING=MapsBest") ' LooksBest | MapsBest
+        .AppendLine("MODEL GEOMETRY ONLY=No") ' Yes | No
+        .AppendLine("EXPLODE DIMENSIONS=No") ' Yes | No
+        .AppendLine("SYMBOLS ARE BLOCKED=Yes") ' Yes | No
+        .AppendLine("AUTOCAD TEMPLATE=") ' None - If using, AutoCAD template filename example C:\CAD\templatename.dwt
+        .AppendLine("DESTINATION DXF=Yes") 'Yes | No
+        .AppendLine("USE ACI FOR ENTITIES AND LAYERS=No") 'Yes | No
+
+        .AppendLine("[EXPORT LINE TYPE & LINE SCALE]")
+        .AppendLine("LINE TYPE FILE=COMPATIBILITY\Support\invISO.lin") ' C:\Users\Public\Documents\Autodesk\Inventor 2019\COMPATIBILITY\Support\invISO.lin
+        .AppendLine("Continuous=Continuous;0.")
+        .AppendLine("Dashed=DASHED;0.")
+        .AppendLine("Dashed Space=DASHED_SPACE;0.")
+        .AppendLine("Long Dash Dotted=LONG_DASH_DOTTED;0.")
+        .AppendLine("Long Dash Double Dot=LONG_DASH_DOUBLE_DOT;0.")
+        .AppendLine("Long Dash Triple Dot=LONG_DASH_TRIPLE_DOT;0.")
+        .AppendLine("Dotted=DOTTED;0.")
+        .AppendLine("Chain=CHAIN;0.")
+        .AppendLine("Double Dash Chain=DOUBLE_DASH_CHAIN;0.")
+        .AppendLine("Dash Double Dot=DASH_DOUBLE_DOT;0.")
+        .AppendLine("Dash Dot=DASH_DOT;0.")
+        .AppendLine("Double Dash Dot=DOUBLE_DASH_DOT;0.")
+        .AppendLine("Double Dash Double Dot=DOUBLE_DASH_DOUBLE_DOT;0.")
+        .AppendLine("Dash Triple Dot=DASH_TRIPLE_DOT;0.")
+        .AppendLine("Double Dash Triple Dot=DOUBLE_DASH_TRIPLE_DOT;0.")
+    End With
+MessageBox.Show(strPath)
+	Try
+		' Write file to path
+    	IO.File.WriteAllText(strPath, oSB.ToString)
+	Catch Ex As Exception
+		MessageBox.Show("There was an error writing the ini file, check you have permission to edit the target directory")
+		' Write failed
+		Return False
+	End Try
+	
+	' Write succeeded
+	Return True
+
+End Function
 
