@@ -1,0 +1,60 @@
+﻿' Title: DRG - Titleblock - Update
+' Description: This copies titleblock definitions from the template into the current document and 'replaces' them to update. 
+' Version: 0.1
+
+' Notes:
+' - Titleblocks need to be the same name for this to update them. otherwise they will be added as a copy
+
+' String used for messagebox titles
+Dim strApp As String = "Titleblock Update"
+
+' Template location, using active project as default. Will need to change to dwg if using the other format
+Dim strTemplatePath As String = ThisApplication.DesignProjectManager.ActiveDesignProject.TemplatesPath & "Standard.idw"
+
+' Check active document is a drawing
+If ThisApplication.ActiveDocumentType <> DocumentTypeEnum.kDrawingDocumentObject Then
+	MessageBox.Show("The active document is not a drawing", strApp)
+	Exit Sub
+End If
+
+' Get active document
+Dim oDoc As DrawingDocument = ThisApplication.ActiveDocument
+
+' Check filepath exists
+If System.IO.File.Exists(strTemplatePath) = False
+	MessageBox.Show("Template doesn't exist",strApp)
+	Exit Sub
+End If
+
+' Open Template - Invisible - will get closed during the close-all even anyway
+Dim oTemplate As Inventor.DrawingDocument = ThisApplication.Documents.Open(strTemplatePath,False)
+
+' Check a document was opened
+If oTemplate Is Nothing Then
+    MessageBox.Show("Template document is nothing",strApp)
+    Exit Sub
+End If
+
+' Check document is a drawing
+If oTemplate.DocumentType <> Inventor.DocumentTypeEnum.kDrawingDocumentObject Then
+    MessageBox.Show("Template document is not a drawing",strApp)
+    Exit Sub
+End If
+
+' Iterate through all titleblock definitions
+For Each oTBD As Inventor.TitleBlockDefinition In oTemplate.TitleBlockDefinitions
+	' Update status to see which block is being copied
+    ThisApplication.StatusBarText = "Copying definition: " & oTBD.Name
+    ' Copy / Update all definitions (Don't need to be specific as template names are the same)
+    oTBD.CopyTo(oDoc, True)
+Next
+
+' Iterate through all sketch symbols
+For Each oSSD As Inventor.SketchedSymbolDefinition In oTemplate.SketchedSymbolDefinitions
+	oSSD.CopyTo(oDoc, True)
+Next
+
+' Close template document
+oTemplate.Close
+
+MessageBox.Show("Titleblock Update Complete",strApp)
