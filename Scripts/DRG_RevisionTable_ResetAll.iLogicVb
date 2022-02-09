@@ -1,6 +1,6 @@
 ﻿' Title: Drawing - Revision Table - Reset All
 ' Description: Reset all revision tables and clear revision tags
-' Version: 0.1
+' Version: 0.2
 
 ' Notes:
 ' Because revision tags are linked to the tables, a blank row has to be added so that each row can be deleted.
@@ -13,6 +13,9 @@ If ThisApplication.ActiveDocumentType <> Inventor.DocumentTypeEnum.kDrawingDocum
 	MessageBox.Show("A drawing document needs to be open")
 	Exit Sub
 End If
+
+' Prompt user for checkers name. Replace with a string if you don't want a prompt
+Dim strChecker As String = InputBox("Enter Checker Initials", "Drawing Revision Reset", "Z.Z")
 
 ' Get the active document
 Dim oDoc As DrawingDocument = ThisApplication.ActiveDocument
@@ -110,7 +113,7 @@ For Each oSheet As Inventor.Sheet In oDoc.Sheets
 		'oRT.RevisionTableRows(1).Item(1).Text = "" This is typically the revision number
 		oRT.RevisionTableRows(1).Item(2).Text = "DESCRIPTION 123" ' DESCRIPTION
 		oRT.RevisionTableRows(1).Item(3).Text = ThisApplication.UserName ' BY
-		oRT.RevisionTableRows(1).Item(4).Text = "CHECKED 123" ' CHECKED BY
+		oRT.RevisionTableRows(1).Item(4).Text = strChecker ' CHECKED BY
 		oRT.RevisionTableRows(1).Item(5).Text = Date.Today.ToShortDateString ' DATE
 		bFound = True
 		Exit For
