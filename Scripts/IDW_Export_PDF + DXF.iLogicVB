@@ -1,13 +1,13 @@
 ﻿Imports system.Windows.Forms
 ' Title: Export Drawings To PDF + DXF
 ' Description: This exports drawings to PDF + DXF 
-' Version: 0.2
+' Version: 0.3
 
 ' Notes:
 ' Export folders can be set below strFolderPDF & strFolderDXF
 
 Sub Main()
-	
+		
 	' Check active document is a drawing
 	If ThisApplication.ActiveDocumentType <> Inventor.DocumentTypeEnum.kDrawingDocumentObject Then
 		MessageBox.Show("A drawing document need to be active", "Document Print Error")  :	Exit Sub
@@ -26,12 +26,16 @@ Sub Main()
 	' Get active document
 	Dim oDoc As DrawingDocument = ThisApplication.ActiveDocument
 
-	' Check if there is a referenced model, update mass if there is (prevents an error on sheets with no model)
-	If oDoc.ReferencedDocuments.Count > 1 Then
-		' Read the mass to prevent N/A issue / triggers generation of mass (This will crash on a presentation file)
-		Dim oMassStr As String = Round(ThisDrawing.ModelDocument.ComponentDefinition.MassProperties.Mass, 0)
-		' Update to trigger the change in the drawing
-		InventorVb.DocumentUpdate()
+	' Update mass
+	If UpdateMass(oDoc) = False Then
+		MessageBox.Show("There was an error updating the mass","Mass Update")
+		Exit Sub
+	End If
+	
+	' Update all views / check for raster views
+	If UpdateAllViews(oDoc) = False Then
+				MessageBox.Show("There was an error updating the drawings views","View Update")
+		Exit Sub
 	End If
 
 	' Get path + filename
@@ -172,6 +176,126 @@ Sub ExportDXF(ByRef oDoc As DrawingDocument, ByVal strfolder As String, ByVal st
 End Sub
 
 ''' <summary>
+''' Update mass for all directly referenced documents in the drawing (anything that has its own view)
+''' </summary>
+''' <param name="oDoc"></param>
+''' <returns>Boolean</returns>
+Function UpdateMass(ByRef oDoc As DrawingDocument) As Boolean
+
+	' Define sheet + view objects
+	Dim oSheet As Inventor.Sheet = Nothing
+	Dim oView As Inventor.DrawingView = Nothing
+
+	' Check if there is a referenced model, update mass if there is (prevents an error on sheets with no model)
+	If oDoc.referencedocuments.count = 0 Then Return False
+	
+	' Define flag
+    Dim bFound As Boolean = False
+	
+	' Define referenced doc / temporary object
+    Dim oRefDoc As Inventor.Document
+
+    ' Update the mass only if it finds the model reference
+    ' Iterate though first level referenced documents
+    For Each oRefDoc In oDoc.ReferencedDocuments
+
+        ' If all drawings only had assembly as the main view, wouldn't need to process parts aswell
+        ' Check it is an iam / ipt - not presentation
+        If oRefDoc.DocumentType <> Inventor.DocumentTypeEnum.kAssemblyDocumentObject AndAlso Inventor.DocumentTypeEnum.kPartDocumentObject Then
+            ' Not a model document so skip to next view
+            Continue For
+        End If
+
+        'Update Reference Document - some documents don't have mass and it triggers an error if this isnt done
+        oRefDoc.Update2(True)
+
+        ' Read the mass to prevent N/A issue / triggers generation of mass.
+        Dim oMassStr As String = ""
+        Dim oMassStr2 As String = ""
+        Dim bMassErr As Boolean = False ' Flag to indicate is there is an issue with the mass or it didnt work
+
+        Try
+            oMassStr = oRefDoc.ComponentDefinition.MassProperties.Mass.ToString() ' This throws an error on some random assemblies, when mass doesn't exist for some reason
+            oMassStr2 = oRefDoc.PropertySets.Item("Design Tracking Properties").Item("Mass").Value / 1000
+        Catch
+            ' Do nothing, Know it throws a random error
+            bMassErr = True
+        End Try
+
+        ' Check both masses are the same, if not, needs an update
+        If bMassErr = True AndAlso oMassStr <> oMassStr2 Then
+            'Try update ref document again
+            oRefDoc.Update2(True)
+            Try
+                ' Re-get properties(not to string on this turn, no reason, just an alternative)
+                oMassStr = oRefDoc.ComponentDefinition.MassProperties.Mass
+                oMassStr2 = oRefDoc.PropertySets.Item("Design Tracking Properties").Item("Mass").Value / 1000
+            Catch
+                ' Return False, If it didnt work, there is likely an issue with the part
+				Return False
+            End Try
+        End If
+    Next
+
+    ' Release reference document model
+    oRefDoc = Nothing
+
+
+	' Update drawing document (ignore errors)
+	oDoc.Update2(True)
+	
+	' Mass update succeeded, return true
+	Return True
+	
+End Function
+
+''' <summary>
+''' Update all drawing views in a document and check they are all precise / not raster views. Change them if the are
+''' </summary>
+''' <param name="oDoc"></param>
+''' <returns>Boolean</returns>
+Function UpdateAllViews(ByRef oDoc As DrawingDocument) As Boolean
+	' Update application status bar for user to monitor progress
+	ThisApplication.StatusBarText = "Updating drawing views"
+	
+	' Make sure there are no raster views, not going to use as unsure if it is efficient as checking all views separately
+	'oDoc.MakeAllViewsPrecise()
+
+	' Ensure all views are updated before printing, this prevents raster view printouts on large assemblies
+	For Each oSheet As Inventor.Sheet In oDoc.Sheets ' Iterate through all sheets
+
+	    ' This was on a couple of drawings where someone mistakenly selected this
+	    ' Check if sheet is excluded from count but is being printed aswell, add it back to the count to prevent export sheet number issues
+	    If oSheet.ExcludeFromCount = True AndAlso oSheet.ExcludeFromPrinting = False Then
+	        ' Add sheet back into count
+	        oSheet.ExcludeFromCount = False
+	    End If
+		
+		' Iterate through all drawing views
+	    For Each oView In oSheet.DrawingViews
+	        ThisApplication.StatusBarText = "Checking if view is raster"
+	        If oView.IsRasterView Then ' Check if view is raster
+	            ThisApplication.StatusBarText = "View is raster so changing to precise"
+	            oView.IsRasterView = False ' Set view to precise / not a raster
+	        End If
+
+	        ' Wait for view to update
+	        ThisApplication.StatusBarText = "Checking if view is updated"
+	        Do While oView.IsUpdateComplete = False
+	            Wait_Inventor(1) ' Just wait fro one second, don't do anything
+	            ThisApplication.StatusBarText = "Updating drawing views"
+	        Loop
+	    Next
+	Next
+
+	ThisApplication.StatusBarText = "Drawing views updated"
+	
+	' Succeeded, return true
+	Return True
+	
+End Function
+
+''' <summary>
 ''' Create a new INI file with the relevant export settings defined
 ''' </summary>
 ''' <param name="strPath">Target path</param>
@@ -252,3 +376,13 @@ MessageBox.Show(strPath)
 
 End Function
 
+''' <summary>
+''' Wait for a length of time in seconds
+''' </summary>
+''' <param name="seconds"></param>
+Public Sub Wait_Inventor(ByVal seconds As Integer)
+    For i As Integer = 0 To seconds * 100
+        System.Threading.Thread.Sleep(10)
+        ThisApplication.UserInterfaceManager.DoEvents() ' Inventor do events
+    Next
+End Sub
