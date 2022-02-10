@@ -76,7 +76,7 @@ Next
 Dim oPoint As Inventor.Point2d = ThisApplication.TransientGeometry.CreatePoint2d(3, 3.704)
 
 ' Assuming the style exists (Change the name of your revision table style to match)
-Dim oRTStyle As Inventor.RevisionTableStyle = oDoc.StylesManager.RevisionTableStyles.Item("Revision History Checked")
+Dim oRTStyle As Inventor.RevisionTableStyle = oDoc.StylesManager.RevisionTableStyles.Item("Revision Table")
 
 ' Iterate through all sheets
 For Each oSheet As Inventor.Sheet In oDoc.Sheets
