@@ -1,0 +1,110 @@
+﻿AddReference "Microsoft.Office.Interop.Excel.dll"
+Imports Excel = Microsoft.Office.Interop.Excel ' Could also just import the Microsoft.Office.Interop instead of using Excel = ....
+
+Sub Main
+	
+	' Set flag for new instance of excel
+	Dim bNewExcel As Boolean
+	
+	' Create new excel object
+	Dim oExcel As Excel.Application = GetExcel(bNewExcel)
+	
+	' Open target workbook. If this was document based, you can get use the active filename
+	Dim strFilename As String = ThisApplication.ActiveDocument.FullFilename
+
+	' Check filename exists / document is saved (unsaved documents have no filename)
+	If strFilename = "" Then
+		MessageBox.Show("Active file has not bee saved")
+	End If
+
+	' Get the directory
+	Dim strDir As String = System.IO.Path.GetDirectoryName(strFilename)
+	
+	' Get the filename without extension & add .xlsx
+	strFilename = strDir & "\" & System.IO.Path.GetFileNameWithoutExtension(strFilename) & ".xlsx"
+
+	' Prompt to check filename
+	MessageBox.Show(strFilename)
+	
+	' Open the target spreadsheet
+	Dim oWB As Excel.Workbook = oExcel.Workbooks.Open(strFilename)
+	
+	' Confirm it was opened
+	MessageBox.Show("Opened")
+	
+	' Get first work sheet
+    Dim oWS As Excel.Worksheet = oExcel.Sheets(1)
+
+    ' Create a new list object
+    Dim myList As New List(Of String)
+	
+	' Define range object (gets the range of used cells (could also use a an excel table and access it using list object or a hardcoded range like oSheet.Range("A1:C99").Value)
+	Dim oRange As Excel.Range = oWS.UsedRange
+	
+	' First row check
+	Dim iCount As Integer = 0
+	
+	' Iterate through each row in range
+	For Each oRow As Excel.Range In oRange.Rows
+		
+		' Increase row Count
+		iCount += 1
+		
+		' Skip the first row / header row. If no headings remove this line
+		If iCount = 1 Then Continue For
+			
+		' Get the first two values in the row
+		myList.Add(oRow.Cells(1, 1).Value & " | " & oRow.Cells(1, 2).Value & " | " & oRow.Cells(1, 3).Value)
+		
+	Next
+	
+	' Create new stringbuilder (to collect / display all values in one message box)
+	Dim oSB As New System.Text.StringBuilder
+	
+	' Iterate through each item in the list
+	For Each strItem As String In myList
+		oSB.AppendLine(strItem)
+	Next
+	
+	' Show user all values
+	MessageBox.Show(oSB.ToString)
+	
+	' Close workbooc (don't save)
+	oWB.Close(False)
+	
+	' Close excel if it was created
+	If bNewExcel Then oExcel.Quit()
+	oExcel = Nothing
+		
+	' Clear list
+	myList.Clear
+	myList = Nothing
+
+End Sub
+
+Function GetExcel(ByRef bNew As Boolean) As Microsoft.Office.Interop.Excel.Application
+	' bNew flag is an indicator to detect if it was a new / created excel application or was existing application
+	' This is to determine if excel should be closed at the end to not close other documents
+	
+	' Define Excel application object
+	Dim oExcel As Microsoft.Office.Interop.Excel.Application
+	
+	' Set the initial flag
+	bNew = False
+	
+	Try
+		'Try to get an active instance of excel
+		oExcel = GetObject("", "Excel.Application")
+	Catch
+		'Create a new excel application instance if its not found
+		oExcel = CreateObject("Excel.Application")
+		bNew = True
+		'oXL = New Microsoft.Office.Interop.Excel.Application ' Alternative option
+	Catch
+		MessageBox.Show("An error occurred trying to Get / Create an instance of Microsoft Excel","Excel Get Failed")
+		Exit Function
+	End Try
+	
+	Return oExcel
+	
+End Function
