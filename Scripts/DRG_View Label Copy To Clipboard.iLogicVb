@@ -1,0 +1,36 @@
+﻿' Title: View Label Copy To Clipboard
+' Description: Copy one view label (formatted text) to clipboard
+' Version: 0.1
+
+' Notes:
+' - Includes all formatted text
+
+
+' Check a document is open
+If ThisApplication.Documents.VisibleDocuments.Count = 0 Then
+	MessageBox.Show("A Drawing Document needs to be open")
+	Exit Sub
+End If
+
+' Check active document
+If ThisApplication.ActiveDocumentType <> Inventor.DocumentTypeEnum.kDrawingDocumentObject Then
+	MessageBox.Show("A Drawing Document needs to be open")
+	Exit Sub
+End If
+
+' Initialise selection
+Dim oVLsource As Inventor.DrawingViewLabel = ThisApplication.CommandManager.Pick(Inventor.SelectionFilterEnum.kDrawingViewLabelFilter, "Select view label to copy")
+
+' Check selection was made
+If oVLsource Is Nothing Then
+	MessageBox.Show("Nothing was selected")
+	Exit Sub
+End If
+
+' Create view label string object and set to view label
+Dim strLabel As String = oVLsource.FormattedText
+
+' Copy view label to clipboard
+System.Windows.Forms.Clipboard.SetText(strLabel)
+
+	
