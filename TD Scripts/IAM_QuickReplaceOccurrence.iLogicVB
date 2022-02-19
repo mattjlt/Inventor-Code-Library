@@ -1,0 +1,71 @@
+﻿' Title: Quick Replace Occurrence
+' Description: Replace occurrences with other another occurrence within an assembly
+' Version: 0.1
+
+' Notes:
+' - N/A
+
+' Define app name for all prompts
+Dim strAppName As String = "Quick Replace"
+
+' Determines if it replaces all occurrences or not
+Dim bReplaceAll As Boolean = False
+
+' Get user input for replacing all
+Dim oResult As DialogResult
+oResult = MessageBox.Show("Do you want to replace all occurrences?",strAppName,MessageBoxButtons.YesNoCancel)
+
+' Check what messagebox result was
+Select Case oResult
+	Case DialogResult.Yes
+		bReplaceAll = True
+	Case DialogResult.No
+		bReplaceAll = False
+	Case Else
+		Exit Sub
+End Select
+
+Try
+	' Check active document type
+	If ThisApplication.ActiveDocumentType <> DocumentTypeEnum.kAssemblyDocumentObject Then
+		MessageBox.Show ("The active document is not an Assembly Document",strAppName)
+		Exit Sub
+	End If
+	
+	' Get the source occrence and check something was selected
+	Dim oSourceOcc As ComponentOccurrence = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kAssemblyOccurrenceFilter, "Select source occurrence")
+	If oSourceOcc Is Nothing Then Exit Sub
+	
+	' Define the replace occurence
+	Dim oReplaceOcc As ComponentOccurrence
+	
+	' Set first run
+	Dim bFirstRun As Boolean = True
+	
+	' Checks if control is held down, if so, keep adding to collection
+	Do While My.Computer.Keyboard.CtrlKeyDown = True Or bFirstRun = True
+	
+		' Clear indicator
+		bFirstRun = False
+		
+		' Clear previous selection
+		oReplaceOcc = Nothing
+		
+		' Start occurence selection
+		oReplaceOcc = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kAssemblyOccurrenceFilter, "Select target occurrence, hold down CTRL to multi select")
+		
+		' Check if occurence was selected, exit loop if not
+		If oReplaceOcc Is Nothing Then Exit Do
+		If oReplaceOcc.IsPatternElement Or oReplaceOcc.IsSubstituteOccurrence Or oReplaceOcc.Suppressed Then
+			MessageBox.Show("Pattern / Suppressed / Substitute elements can't be replaced",strAppName)
+			Continue Do ' This will skip this selection and restart the do event
+		End If
+		
+		' Replace document
+		oReplaceOcc.Replace(oSourceOcc.ReferencedDocumentDescriptor.ReferencedDocument.FullFileName, bReplaceAll)
+		
+	Loop
+	
+Catch Ex As Exception
+	MessageBox.Show(Ex.Message, strAppName)
+End Try

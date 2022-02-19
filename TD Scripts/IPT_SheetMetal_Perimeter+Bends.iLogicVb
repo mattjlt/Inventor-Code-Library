@@ -1,0 +1,81 @@
+﻿Imports Inventor
+Imports InventorTools.InventorTools.StandardAddInServer
+
+ Sub Main()
+ Try
+	 ' Check document type (Added both references because although they should always return the same thing, a bug in the old inventor interop causes one to give an incorrect value.
+	 If ThisApplication.ActiveDocument.SubType <> "{9C464203-9BAE-11D3-8BAD-0060B0CE6BB4}" And ThisApplication.ActiveDocument.DocumentSubType.DocumentSubTypeID <> "{9C464203-9BAE-11D3-8BAD-0060B0CE6BB4}" Then
+	 	MsgBox("A sheet metal part document needs to be open")
+	 End If
+	 
+	 Dim oDoc As PartDocument = ThisApplication.ActiveDocument
+	 Dim oCompDef As SheetMetalComponentDefinition = oDoc.ComponentDefinition
+	 Dim oFP As FlatPattern = oCompDef.FlatPattern
+	 
+	 ' Check flat pattern exists
+	 If oFP Is Nothing Then
+	 	MsgBox("No flat pattern exists")
+	 Exit Sub
+	 End If
+	 
+	 ' Create transaction to increase speed & contain commands
+	 Dim oTrans As Transaction = ThisApplication.TransactionManager.StartTransaction(oDoc, "CalculatePerimetersBends")
+	 
+	 ' Get top face of flat pattern
+	 Dim oFace As Face = oCompDef.FlatPattern.TopFace
+	 
+	 ' Define geometry variable
+	 Dim dOuterLength, dInnerLength, dTotalLength As Double
+	 Dim dEdgeLength As Double, dMin As Double, dMax As Double
+	 Dim innerLoopCount As Integer = 1
+	 
+	 ' Define geometry edge objects
+	 Dim oLoop As EdgeLoop, oOuterLoop As EdgeLoop, oEdge As Edge
+	 
+	 ' Loop through all edges on top face
+	 For Each oLoop In oFace.EdgeLoops
+		 If oLoop.IsOuterEdgeLoop Then
+			 oOuterLoop = oLoop ' Reference outer loop for later use
+			 For Each oEdge In oLoop.Edges ' Loop is outer edge loop
+				 ' Get the length of the current edge
+				 oEdge.Evaluator.GetParamExtents(dMin, dMax)
+				 oEdge.Evaluator.GetLengthAtParam(dMin, dMax, dEdgeLength)
+				 dOuterLength += dEdgeLength
+			 Next
+			 Else
+			 For Each oEdge In oLoop.Edges ' Loop is inside edge loop
+				 ' Get the length of the current edge.
+				 oEdge.Evaluator.GetParamExtents(dMin, dMax)
+				 oEdge.Evaluator.GetLengthAtParam(dMin, dMax, dEdgeLength)
+				 dInnerLength += dEdgeLength
+			 Next
+				 ' Increase internal loop count
+				 innerLoopCount = innerLoopCount + 1
+	 	End If
+	 Next
+	 
+	 ' Calculate the total length
+	 dTotalLength = dInnerLength + dOuterLength
+	 
+	 Dim oUom As UnitsOfMeasure = oDoc.UnitsOfMeasure
+	 
+	 'Get the custom property set
+	 Dim usrProps As Inventor.PropertySet = oDoc.PropertySets.Item("Inventor User Defined Properties")
+	 
+	 setUserProperty(usrProps, "OuterPerimeter", oUom.GetStringFromValue(dOuterLength, Inventor.UnitsTypeEnum.kMillimeterLengthUnits))
+	 setUserProperty(usrProps, "InnerPerimeters", oUom.GetStringFromValue(dInnerLength, Inventor.UnitsTypeEnum.kMillimeterLengthUnits))
+	 setUserProperty(usrProps, "TotalPerimeter", oUom.GetStringFromValue(dTotalLength, Inventor.UnitsTypeEnum.kMillimeterLengthUnits))
+	 setUserProperty(usrProps, "Pierces", innerLoopCount)
+	 setUserProperty(usrProps, "Bends", oCompDef.Bends.Count)
+	 
+	 ' End transaction
+	 oTrans.End()
+	 
+ Catch Ex As Exception
+ 	MessageBox.Show(Ex.Message, oAppName)
+ End Try
+
+
+ 
+ End Sub
+ 

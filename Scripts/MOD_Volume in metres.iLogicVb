@@ -1,0 +1,40 @@
+﻿' Title: Volume in metres
+' Description: Displays document properties in metres / useable units regardless of active standard
+' Version: 0.1
+
+' Notes:
+' - Create custom user form And display all Of these On a Single form?
+' - Add capability for assembly files
+' - Get volume from component definition.
+' - Using the iProps Volume changes depending on current Document unit Type. This method avoids those issues.
+
+' Get the active edit document
+Dim oDoc As Document = ThisApplication.ActiveEditDocument
+
+' Check document type
+If oDoc.DocumentType <> DocumentTypeEnum.kPartDocumentObject And oDoc.DocumentType <> DocumentTypeEnum.kAssemblyDocumentObject Then
+	MessageBox.Show("A Model Document Must Be Open")
+	Exit Sub
+End If
+
+' Get the component definition
+Dim oCompDef As ComponentDefinition = oDoc.ComponentDefinition
+
+' Get Mass properties where volume + mass are stored
+Dim oMP As MassProperties = oDoc.ComponentDefinition.MassProperties
+
+' Get the current document document unit of measure
+Dim oUOM As UnitsOfMeasure = oDoc.UnitsOfMeasure
+
+' Get the volume using custom m^3 format (this is because m^3 isn't a standard included in the units of measure enum)
+MessageBox.Show("Volume: " & oUOM.GetStringFromValue(oMP.Volume, "m^3") & System.Environment.NewLine &
+				"Area: " & oUOM.GetStringFromValue(oMP.Area, "m^2") & System.Environment.NewLine & 
+				"Mass: " & oUOM.GetStringFromValue(oMP.Mass, "kg") & System.Environment.NewLine & 
+				"Mass: " & oUOM.GetStringFromValue(oMP.Mass/1000, "T") & System.Environment.NewLine & 
+				"Mass Override : "  & oMP.MassOverridden,"Physical Properties - Custom Units")
+				
+' Gets the default unit of measure in the document (not used)
+'Dim defaultLength As String = oUOM.GetStringFromType(oUOM.LengthUnits)
+'MessageBox.Show(oUOM.GetStringFromValue(oMP.Volume, defaultLength & "^3"))
+
+Exit Sub

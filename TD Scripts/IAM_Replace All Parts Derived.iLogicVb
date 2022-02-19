@@ -1,0 +1,48 @@
+﻿' Title: Replace All Parts Derived
+' Description: Replace all derived part references to a new file
+' Version: 0.1
+
+' Notes:
+' - This method requires that the file being replaced and the replacement file must share ancestry
+' - that Is To say that one file was saved From the other file, Or both files were saved From the same "parent" file.
+
+' Define app name for all prompts
+Dim strAppName As String = "Replace Derived Part"
+
+'' Check the active document is an assembly file
+'If ThisApplication.ActiveEditDocument.Type <> DocumentTypeEnum.kAssemblyDocumentObject Then
+'	MessageBox.Show("An assembly document must be active", strAppName)
+'	Exit Sub
+'End If
+
+' Create file dialog
+Dim oFD As Inventor.FileDialog
+InventorVb.Application.CreateFileDialog(oFD)
+oFD.InitialDirectory = ThisApplication.ActiveEditDocument.File.FullFileName
+oFD.CancelError = False
+oFD.ShowOpen()
+
+If oFD.FileName = "" Then
+	MessageBox.Show("No file selected", strAppName)
+	Exit Sub
+End If
+
+strDerivedFile = oFD.FileName
+
+Dim oRefFile As FileDescriptor    
+Dim oADoc As Inventor.AssemblyDocument = ThisApplication.ActiveEditDocument
+
+
+For Each oDoc As Document In oADoc.ReferencedDocuments
+	If oDoc.DocumentType = Inventor.DocumentTypeEnum.kPartDocumentObject Then	
+		For Each oRefFile In oDoc.File.ReferencedFileDescriptors
+			'Replace the reference
+			oRefFile.ReplaceReference(strDerivedFile)
+			' Update Part
+			oDoc.Update
+		Next
+	End If
+Next
+
+' Update Assembly
+oADoc.Update

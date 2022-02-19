@@ -1,0 +1,38 @@
+﻿'https://forums.autodesk.com/t5/Inventor-customization/getting-accurate-rangebox-xyz-values/td-p/8332760
+
+' This only works on inventor 2020.3 and newer
+
+' Get the current Part document.
+Dim partDoc As PartDocument = ThisDoc.Document
+
+' Get surface body to measure (assume it's the first body).
+Dim body1 As SurfaceBody = partDoc.ComponentDefinition.SurfaceBodies.Item(1)
+
+' Get the oriented mininum range box of the body.
+' NOTE: "OrientedMinimumRangeBox" was added in Inventor 2020.3/2021.
+Dim minBox As OrientedBox = body1.OrientedMinimumRangeBox
+
+' Get length of each side of mininum range box.
+Dim dir1 As Double = minBox.DirectionOne.Length
+Dim dir2 As Double = minBox.DirectionTwo.Length
+Dim dir3 As Double = minBox.DirectionThree.Length
+
+' Convert lengths to document's length units.
+Dim uom As UnitsOfMeasure = partDoc.UnitsOfMeasure
+
+dir1 = uom.ConvertUnits(dir1, "cm", uom.LengthUnits)
+dir2 = uom.ConvertUnits(dir2, "cm", uom.LengthUnits)
+dir3 = uom.ConvertUnits(dir3, "cm", uom.LengthUnits)
+
+' Sort lengths from smallest to largest.
+Dim lengths As New List(Of Double) From {dir1, dir2, dir3 }
+lengths.Sort
+
+Dim minLength As Double = lengths(0)
+Dim midLength As Double = lengths(1)
+Dim maxLength As Double = lengths(2)
+
+' Display minimum rangebox size.
+MessageBox.Show("Oriented Minimum Rangebox Size: " &
+	minLength.ToString("#.###") & " x " & midLength.ToString("#.###") & " x " & maxLength.ToString("#.###"),
+	"Oriented Minimum Rangebox", MessageBoxButtons.OK, MessageBoxIcon.Information)

@@ -1,0 +1,33 @@
+' Title: Scale Form
+' Description: Scale windows form for high resolution monitors
+' Version: 1.0
+
+' Notes:
+' Call this up using
+'ScaleForm(oForm)
+
+Imports System.Windows.Forms
+AddReference "System.Drawing.dll"
+Imports System.Drawing
+Imports Inventor
+Imports clsSharedFunctions ' Globally import so it's available to all classes
+
+
+Public Class clsSharedFunctions
+	
+	Public Shared strAppName As String = "Drawing Compliance Form"	
+
+	Public Shared Sub ScaleForm(WindowsForm As System.Windows.Forms.Form)
+    Using g As System.Drawing.Graphics = WindowsForm.CreateGraphics
+        Dim sngScaleFactor As Single = 1
+        Dim sngFontFactor As Single = 1
+        If g.DpiX > 96 Then
+            sngScaleFactor = g.DpiX / 96
+            'sngFontFactor = 96 / g.DpiY
+        End If
+        If WindowsForm.AutoScaleDimensions = WindowsForm.CurrentAutoScaleDimensions Then
+            'ucWindowsFormHost.ScaleControl(WindowsForm, sngFontFactor)
+            WindowsForm.Scale(sngScaleFactor)
+        End If
+    End Using
+End Sub
