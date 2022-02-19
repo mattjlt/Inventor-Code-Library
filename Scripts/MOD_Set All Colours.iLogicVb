@@ -1,5 +1,8 @@
-Imports System.Windows.Forms
+﻿Imports System.Windows.Forms
+AddReference "System.Drawing.dll"
 Imports System.Drawing
+Imports Inventor
+Imports clsSharedFunctions ' Globally import so it's available to all classes
 ' Title: Set All Colours
 ' Description: Change all parts to be the same colour
 ' Version: 0.2
@@ -44,6 +47,7 @@ Public Class RunMyForm
 		
 		' Create new instance of the custom form (sends appearance list to form)
         Dim myfrm As New CustomForm(appearanceList)
+	ScaleForm(myfrm)
 		
 		Dim strAppearance As String = ""
 		Dim bClearOverride As Boolean = True
@@ -164,7 +168,7 @@ Public Class CustomForm
 			'.MinimizeBox = False
 			.StartPosition = FormStartPosition.CenterScreen
 			.Width = 300
-			.Height = 175
+			.Height = 200
 			.TopMost = True
 			.Text = "Set Part Colours"
 			.Name = "Set Part Colours"
@@ -236,6 +240,7 @@ Public Class CustomForm
 		' Set default dialog result
 		Me.DialogResult = System.Windows.Forms.DialogResult.None
 		
+		
 	End Sub
 
 	Private Sub CustomForm_FormClosing(ByVal sender As Object, ByVal e As System.Windows.Forms.FormClosingEventArgs) Handles Me.FormClosing
@@ -291,4 +296,26 @@ Public Class CustomForm
         End If
 End Sub
 
+
+
+End Class
+
+Public Class clsSharedFunctions
+	
+	Public Shared strAppName As String = "Set All Colours"	
+
+	Public Shared Sub ScaleForm(WindowsForm As System.Windows.Forms.Form)
+    Using g As System.Drawing.Graphics = WindowsForm.CreateGraphics
+        Dim sngScaleFactor As Single = 1
+        Dim sngFontFactor As Single = 1
+        If g.DpiX > 96 Then
+            sngScaleFactor = g.DpiX / 96
+            'sngFontFactor = 96 / g.DpiY
+        End If
+        If WindowsForm.AutoScaleDimensions = WindowsForm.CurrentAutoScaleDimensions Then
+            'ucWindowsFormHost.ScaleControl(WindowsForm, sngFontFactor)
+            WindowsForm.Scale(sngScaleFactor)
+        End If
+    End Using
+	End Sub
 End Class
