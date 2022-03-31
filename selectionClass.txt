@@ -1,0 +1,356 @@
+
+********************************************
+' 	MODULE / SUB CALLING CLASS
+********************************************
+    
+    Public Sub View_GetPoint()
+
+        ' Create selection process instance
+        Dim oSC As New Select_ViewPosition
+
+        ' Get the target point
+        Dim oTargetPoint As Point2d = oSC.Pick()
+
+        ' Check to make sure something was selected
+        If oTargetPoint Is Nothing Then
+            MessageBox.Show("Target point not selected")
+            Exit Sub
+        End If
+
+        ' Save point to settings
+        My.Settings.SourceView_X = oTargetPoint.X
+        My.Settings.SourceView_Y = oTargetPoint.Y
+
+        ' Save to settings
+        My.Settings.Save()
+
+        ' Clear objects
+        oSC = Nothing
+        oTargetPoint = Nothing
+
+
+    End Sub
+
+********************************************
+' 		CLASS BELOW HERE
+********************************************
+
+Imports System.Collections.Generic
+Imports System.Windows.Forms
+Imports Inventor
+' You will need to change this to whatever you are using
+Imports TD_DrawingAlign.TD_DrawingAlign.StandardAddInServer
+
+Public Class Select_ViewPosition
+
+    Private WithEvents oInteraction As Inventor.InteractionEvents
+    Private WithEvents oSelectEvents As Inventor.SelectEvents
+    Private WithEvents oMouseEvents As Inventor.MouseEvents
+
+    Private bStillSelecting As Boolean
+    Public oHighlightedCurveSegment As DrawingCurveSegment ' This is public so calling sub can access directly + get the parent view
+    Private oIG As InteractionGraphics
+    Private oCG As ClientGraphics
+
+    Private selectedPoint As Inventor.Point2d
+
+    Public Sub New()
+
+        ' Set event objects
+        oInteraction = ThisApplication.CommandManager.CreateInteractionEvents
+        oSelectEvents = oInteraction.SelectEvents
+        oMouseEvents = oInteraction.MouseEvents
+
+        ' Set graphics objects
+        oIG = oInteraction.InteractionGraphics
+        oCG = oIG.OverlayClientGraphics
+
+        ' Assign nothing to selected point so it at least doesnt return Null
+        selectedPoint = Nothing
+
+    End Sub
+
+    Public Function Pick() As Point2d
+
+        ' Need to work out when the 'on terminated' function runs so it doesnt set the objects to nothing twice on 'cleanup' / escape
+
+        ' Set selection flag
+        bStillSelecting = True
+
+        oSelectEvents.Enabled = True
+        oSelectEvents.SingleSelectEnabled = True
+
+        ' Enable mouse movement events
+        oMouseEvents.MouseMoveEnabled = True
+
+        ' Add selection filter
+        oSelectEvents.AddSelectionFilter(SelectionFilterEnum.kDrawingCurveSegmentFilter)
+
+        ' Reset / assign objects
+        oHighlightedCurveSegment = Nothing
+
+        ' Start interaction
+        oInteraction.Start()
+
+        ' Run until selected
+        While bStillSelecting = True
+            ThisApplication.UserInterfaceManager.DoEvents()
+        End While
+
+        ' Stop interaction + mouse move
+        oInteraction.Stop()
+        oMouseEvents.MouseMoveEnabled = False
+
+        ' Clear objects
+        oMouseEvents = Nothing
+        oInteraction = Nothing
+
+        Return selectedPoint
+
+    End Function
+
+    Private Sub oSelectEvents_OnPreSelect(ByRef PreSelectEntity As DrawingCurveSegment, ByRef DoHighlight As Boolean, ByRef MorePreSelectEntities As Inventor.ObjectCollection, SelectionDevice As Inventor.SelectionDeviceEnum, ModelPosition As Inventor.Point, ViewPosition As Inventor.Point2d, View As Inventor.View) Handles oSelectEvents.OnPreSelect
+
+        oHighlightedCurveSegment = PreSelectEntity
+
+        ' Preselect can prevent highlight
+        ' DoHighlight = False
+
+    End Sub
+
+
+    Private Sub oSelectEvents_OnSelect(JustSelectedEntities As ObjectsEnumerator, SelectionDevice As SelectionDeviceEnum, ModelPosition As Point, ViewPosition As Point2d, View As Inventor.View) Handles oSelectEvents.OnSelect
+
+        ' Just selected entities is a collection
+        If JustSelectedEntities.Count = 0 Then
+            ' No objects selected
+            oHighlightedCurveSegment = Nothing
+            Exit Sub
+        Else
+            ' Get first selected item
+            oHighlightedCurveSegment = JustSelectedEntities.Item(1)
+        End If
+
+        ' Exit if no highlughted curve object
+        If oHighlightedCurveSegment Is Nothing Then Exit Sub
+
+        ' Circles have start + end point properties; but when the circle is fully closed, it is set to 'nothing'
+        Dim oTargetPoint As Inventor.Point2d = Nothing
+
+        ' Check highlighted curve type
+        Select Case oHighlightedCurveSegment.GeometryType
+
+            Case Curve2dTypeEnum.kLineSegmentCurve2d, Curve2dTypeEnum.kBSplineCurve2d
+                ' for some reason thi
+                oTargetPoint = ClosestPoint(ModelPosition, oHighlightedCurveSegment.StartPoint, oHighlightedCurveSegment.EndPoint)
+
+            Case Curve2dTypeEnum.kCircleCurve2d
+                ' Complete circle curve
+                Dim oCircle As Inventor.Circle2d = oHighlightedCurveSegment.Geometry
+                'oTargetPoint = ClosestPoint(ModelPosition, oCircle.Center)
+                oTargetPoint = oCircle.Center
+
+            Case Curve2dTypeEnum.kCircularArcCurve2d
+                ' Circular arc curve
+                Dim oArc As Inventor.Arc2d = oHighlightedCurveSegment.Geometry
+                oTargetPoint = ClosestPoint(ModelPosition, oArc.StartPoint, oArc.EndPoint, oArc.Center)
+            Case Else
+                'ThisApplication.StatusBarText = "Not matching edge type"
+                Exit Sub
+        End Select
+
+        ' Check there is a valid target point
+        If oTargetPoint Is Nothing Then
+            MessageBox.Show("No point selected", "User selection")
+            bStillSelecting = False
+            Exit Sub
+        End If
+
+        ' Assign point to target point
+        selectedPoint = oTargetPoint
+
+        ' Set selection flag
+        bStillSelecting = False
+
+
+
+    End Sub
+
+    Private Sub oInteraction_OnTerminate() Handles oInteraction.OnTerminate
+
+        ' Do nothing
+        bStillSelecting = False
+
+        ' Clear references
+        oHighlightedCurveSegment = Nothing
+
+        ' Turn off mouse move monitoring and clear reference just in case
+        oMouseEvents.MouseMoveEnabled = False
+        oMouseEvents = Nothing
+
+        ' Remove any overlay graphics and clear objects
+        oCG.Delete()
+        oCG = Nothing
+        oIG = Nothing
+
+        ' Set event objects
+        oInteraction.Stop()
+        oInteraction = Nothing
+
+        ' Assign nothing to selected point so it at least doesnt return Null
+        selectedPoint = Nothing
+
+    End Sub
+
+
+
+    Private Sub oMouseEvents_OnMouseMove(ByVal Button As MouseButtonEnum, ByVal ShiftKeys As ShiftStateEnum, ByVal ModelPosition As Point, ByVal ViewPosition As Point2d, ByVal View As Inventor.View) Handles oMouseEvents.OnMouseMove
+
+
+        ' The last highlighted point will always be set to this object, so checking distance to point should be done otherwise it will not be de-selected until user hovers over another line
+
+        ' Exit if no highlighted curve object
+        If oHighlightedCurveSegment Is Nothing Then Exit Sub
+
+
+        ' Circles have start + end point properties; but when the circle is fully closed, it is set to 'nothing'
+        Dim oTargetPoint As Inventor.Point2d = Nothing
+
+        ' Check highlighted curve type
+        Select Case oHighlightedCurveSegment.GeometryType
+
+            Case Curve2dTypeEnum.kLineSegmentCurve2d, Curve2dTypeEnum.kBSplineCurve2d
+                ' for some reason thi
+                oTargetPoint = ClosestPoint(ModelPosition, oHighlightedCurveSegment.StartPoint, oHighlightedCurveSegment.EndPoint)
+
+            Case Curve2dTypeEnum.kCircleCurve2d
+                ' Complete circle curve
+                Dim oCircle As Inventor.Circle2d = oHighlightedCurveSegment.Geometry
+                'oTargetPoint = ClosestPoint(ModelPosition, oCircle.Center)
+                oTargetPoint = oCircle.Center
+
+            Case Curve2dTypeEnum.kCircularArcCurve2d
+                ' Circular arc curve
+                Dim oArc As Inventor.Arc2d = oHighlightedCurveSegment.Geometry
+                oTargetPoint = ClosestPoint(ModelPosition, oArc.StartPoint, oArc.EndPoint, oArc.Center)
+            Case Else
+                'ThisApplication.StatusBarText = "Not matching edge type"
+                Exit Sub
+        End Select
+
+        ' Check there is a valid target point, clear it if not
+        If oTargetPoint Is Nothing Then
+
+            ' Check there is a node in client graphics first
+            If oCG.Count = 1 Then
+                ' Clear graphics node
+                oCG.ItemById(0).Delete()
+            End If
+
+            ' Exit sub / no object
+            Exit Sub
+        End If
+
+        ' Show circle on the point
+        ShowGreenCircle(oTargetPoint)
+
+    End Sub
+
+    Private Sub ShowGreenCircle(oPoint As Inventor.Point2d)
+
+        Dim oGN As Inventor.GraphicsNode
+        Dim oPG As Inventor.PointGraphics
+
+        ' Check the client graphics count
+        If oCG.Count = 0 Then ' For new item
+            ' Add a new graphics node to client grapics
+            oGN = oCG.AddNode(0)
+
+            ' Add point graphics to graphics node
+            oPG = oGN.AddPointGraphics
+        Else
+            ' Get existing graphics node
+            oGN = oCG.ItemById(0)
+
+            ' Get existing point graphics
+            oPG = oGN.Item(1)
+        End If
+
+        ' Create graphics coordinate set
+        Dim oGCS As Inventor.GraphicsCoordinateSet = oIG.GraphicsDataSets.CreateCoordinateSet(0)
+
+        ' Create point array
+        Dim dPoints(3) As Double
+        dPoints(0) = oPoint.X    ' X
+        dPoints(1) = oPoint.Y    ' Y
+        dPoints(2) = 0           ' Z Always zero on a drawing
+
+        ' Set graphics node points
+        oGCS.PutCoordinates(dPoints)
+
+        ' Set point graphics coordinates
+        oPG.CoordinateSet = oGCS
+
+        ' Set point display properties
+        oPG.PointRenderStyle = Inventor.PointRenderStyleEnum.kEndPointStyle
+        oPG.BurnThrough = True
+
+        ' Update view / graphics (This may add to wrong view window only if user has multiple of the same document / split window open which is almost never used.
+        oIG.UpdateOverlayGraphics(ThisApplication.ActiveDocument.Views(1))
+
+    End Sub
+
+    Public Function ClosestPoint(ByVal SourcePoint As Inventor.Point, ByVal Point1 As Inventor.Point2d, Optional ByVal Point2 As Inventor.Point2d = Nothing, Optional ByVal Point3_Center As Inventor.Point2d = Nothing) As Inventor.Point2d
+
+        ' Only add points that are not empty
+        Dim myList As New List(Of Inventor.Point2d)
+
+        ' Populate with non empty objects
+        If Point1 IsNot Nothing Then myList.Add(Point1)
+        If Point2 IsNot Nothing Then myList.Add(Point2)
+        If Point3_Center IsNot Nothing Then myList.Add(Point3_Center) ' Only ever set this as center of arc
+
+        Dim dRange As Double = 0.5 ' Limiting range as distance in centimetres
+
+        ' Create closest point object
+        Dim oClosestPoint As Inventor.Point2d = Nothing ' = myList.Item(0)
+        Dim dClosestDistance As Double = 99999 ' Use large number for safety
+        Dim dTempDistance As Double = 0
+
+        ' Loop through three items
+        For Each item As Inventor.Point2d In myList
+
+            Try
+                ' Calculate distance
+                dTempDistance = Math.Abs(Math.Sqrt((SourcePoint.X - item.X) ^ 2 + (SourcePoint.Y - item.Y) ^ 2))
+
+                ' Check it is within range
+                If dTempDistance > dRange Then
+                    Continue For
+                End If
+
+                ' Check value is shorter
+                If dTempDistance < dClosestDistance Then
+                    ' Assign closest point
+                    oClosestPoint = item
+                    ' Assign closest distance
+                    dClosestDistance = dTempDistance
+                End If
+
+            Catch ex As Exception
+                MessageBox.Show("Error trying to calculate " & ControlChars.NewLine & ex.Message, "Closest Point Calculation")
+            End Try
+
+        Next
+
+        ' Check to see if no closest point found, and if centerpoint is there, then use centerpoint as default
+        If oClosestPoint Is Nothing And Point3_Center IsNot Nothing Then
+            oClosestPoint = Point3_Center
+        End If
+
+        ' Should be able to get here but return point1 if it happens
+        Return oClosestPoint
+
+    End Function
+
+End Class
