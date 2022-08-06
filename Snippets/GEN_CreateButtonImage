@@ -1,0 +1,36 @@
+#Region "Image Converter"
+    ' Class used to convert bitmaps and icons between their .Net native types
+    ' and an IPictureDisp object which is what the Inventor API requires.
+
+    <Global.System.Security.Permissions.PermissionSetAttribute _
+    (Global.System.Security.Permissions.SecurityAction.Demand, Name:="FullTrust")>
+    Public Class ConvertImage
+        Inherits System.Windows.Forms.AxHost
+        Public Sub New()
+            MyBase.New("59EE46BA-677D-4d20-BF10-8D8067CB8B32")
+        End Sub
+
+        Public Shared Function ConvertImageToIPictureDisp(ByVal Image As System.Drawing.Image) As stdole.IPictureDisp
+            Try
+                Return (GetIPictureFromPicture(Image))
+            Catch ex As Exception
+                Return Nothing
+            End Try
+        End Function
+        Public Shared Function ConvertIconToIPictureDisp(ByVal Icon As System.Drawing.Icon) As stdole.IPictureDisp
+            Try
+                Return (GetIPictureFromPicture(Icon.ToBitmap)) ' Not sure if this will work correctly
+            Catch ex As Exception
+                Return Nothing
+            End Try
+        End Function
+
+        Public Shared Function ConvertIPictureDispToImage(ByVal IPict As stdole.IPictureDisp) As System.Drawing.Image
+            Try
+                Return (GetPictureFromIPictureDisp(IPict))
+            Catch ex As Exception
+                Return Nothing
+            End Try
+        End Function
+    End Class
+#End Region
